@@ -1,7 +1,7 @@
 Import-Module WebAdministration
 
 Configuration TestConfiguration
-{ 
+{
     Import-DscResource -Module cWebAdministration
 
     Node 'localhost'
@@ -28,28 +28,28 @@ Configuration TestConfiguration
 
         cWebsite TestWebsite
         {
-            Ensure = "Present" 
+            Ensure = "Present"
             Name   = "Test"
             ApplicationPool = "Test"
-            BindingInfo = @(SEEK_cWebBindingInformation 
-                            { 
-                                Protocol = "http" 
+            BindingInfo = @(SEEK_cWebBindingInformation
+                            {
+                                Protocol = "http"
                                 Port = 80
-                                HostName = "test.dev" 
-                            };SEEK_cWebBindingInformation 
-                            { 
-                                Protocol = "http" 
+                                HostName = "test.dev"
+                            };SEEK_cWebBindingInformation
+                            {
+                                Protocol = "http"
                                 Port = 8080
-                                HostName = "test.dev" 
-                            };SEEK_cWebBindingInformation 
-                            { 
+                                HostName = "test.dev"
+                            };SEEK_cWebBindingInformation
+                            {
                                 Protocol = "net.pipe"
-                                HostName = "test.services" 
-                            };SEEK_cWebBindingInformation 
-                            { 
-                                Protocol = "net.tcp" 
+                                HostName = "test.services"
+                            };SEEK_cWebBindingInformation
+                            {
+                                Protocol = "net.tcp"
                                 Port = 5555
-                                HostName = "test.dev" 
+                                HostName = "test.dev"
                             })
             AuthenticationInfo = SEEK_cWebAuthenticationInformation
                                 {
@@ -62,18 +62,18 @@ Configuration TestConfiguration
             State = "Started"
             DependsOn = @("[cWebAppPool]TestAppPool")
         }
-    } 
+    }
 }
 
 Describe "WebSite DSC Resource" {
     Context "when web site is absent" {
-        
+
         Remove-WebSite "Test" -ErrorAction Ignore
         Remove-WebAppPool "Test" -ErrorAction Ignore
         mkdir C:\inetpub\wwwroot\test | Out-Null
         TestConfiguration -OutputPath .\tmp | Out-Null
         Start-DscConfiguration -Wait -Verbose -Path .\tmp
-        
+
         It "creates a new application pool" {
             $AppPoolState = Get-WebAppPoolState "Test"
             $AppPoolState.Value | Should Be "Started"

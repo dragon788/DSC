@@ -26,7 +26,7 @@ function New-TestQueue
 Describe "Get-QueueDetails" {
     Context "when queue exists" {
         New-TestQueue
-        
+
         It "returns details as a hash" {
             $Details = Get-QueueDetails -Name "Test"
             $Details.Name | Should Be "Test"
