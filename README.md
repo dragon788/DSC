@@ -29,7 +29,7 @@ Simply run the setup script from the project (as administrator):
 ```
 PS> cd DSC
 PS> .\Setup.ps1
-
+```
 
 You should now see some modules in the PowerShell Module path. For example:
 
