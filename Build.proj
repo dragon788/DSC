@@ -1,0 +1,29 @@
+<Project DefaultTargets="Test" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">$(WINDIR)\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
+    <PesterExe Condition=" '$(PesterExe)'=='' ">$(baseDir)Tools\Pester\bin\pester.bat</PesterExe>
+  </PropertyGroup>
+
+  <Target Name="Test" DependsOnTargets="UnitTest;IntegrationTest;E2ETest">
+  </Target>
+
+  <Target Name="UnitTest">
+    <Exec Command="cmd /c $(PesterExe) Tests\Unit"/>
+  </Target>
+
+  <Target Name="IntegrationTest">
+    <Exec Command="cmd /c $(PesterExe) Tests\Integration"/>
+  </Target>
+
+  <Target Name="E2ETest" DependsOnTargets="FlushCache">
+    <Exec Command="cmd /c $(PesterExe) Tests\E2E"/>
+  </Target>
+
+  <Target Name="Clean" >
+    <Delete Files="$(baseDir)Test.xml" />
+  </Target>
+
+  <Target Name="FlushCache">
+    <Exec Command="$(PowerShellExe) -NonInteractive -NoProfile -executionpolicy bypass -command &quot;&amp;{restart-service winmgmt -force}&quot;" />
+  </Target>
+</Project>
