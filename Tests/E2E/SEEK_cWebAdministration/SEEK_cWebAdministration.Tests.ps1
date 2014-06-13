@@ -100,7 +100,7 @@ Describe "WebSite DSC Resource" {
         mkdir C:\inetpub\wwwroot\test -ErrorAction Ignore | Out-Null
         mkdir C:\Temp\TestVirtualDir -ErrorAction Ignore | Out-Null
         mkdir C:\Temp\TestApplication -ErrorAction Ignore | Out-Null
-        TestConfiguration -OutputPath .\tmp | Out-Null
+        TestConfiguration -Force -OutputPath .\tmp | Out-Null
         Start-DscConfiguration -Wait -Verbose -Path .\tmp
 
         It "creates a new application pool" {

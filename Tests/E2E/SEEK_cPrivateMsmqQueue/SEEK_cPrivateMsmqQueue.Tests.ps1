@@ -48,7 +48,7 @@ Describe "PrivateMsmqQueue and PrivateMsmqQueuePermissions DSC Resource" {
 
     It "creates new queues with custom permissions" {
         TestConfiguration -OutputPath .\tmp
-        Start-DscConfiguration -Wait -Verbose -Path .\tmp
+        Start-DscConfiguration -Force -Wait -Verbose -Path .\tmp
         [System.Messaging.MessageQueue]::Exists(".\private$\Test1") | Should Be $true
         [System.Messaging.MessageQueue]::Exists(".\private$\Test2") | Should Be $true
     }
