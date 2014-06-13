@@ -122,7 +122,6 @@ function Set-TargetResource
 
             Write-Verbose "Converting $CertificateINI to CSR: certreq -new $CertificateINI $CertificateREQ"
             certreq -new $CertificateINI $CertificateREQ
-            #Certreq.exe -new API_dev_Request.inf API_dev.csr
 
             ### Online certificate request and import
             if ($OnlineCA) {
@@ -131,12 +130,10 @@ function Set-TargetResource
 
                 Write-Verbose "Submitting: certreq -submit -config $OnlineCA $CertificateREQ $CertificateCER"
                 certreq -submit -config $OnlineCA $CertificateREQ $CertificateCER
-                #certreq.exe -submit -config "vm-aumel-casub\SEEK Intermediate CA" API_dev.csr API_dev.cer
 
 
                 Write-Verbose "Merging certificate response file and CSR together to generate SSL certificate: certreq -accept -config $OnlineCA $CertificateCER"
                 certreq -accept -config $OnlineCA $CertificateCER
-                #certreq.exe -accept -config "vm-aumel-casub\SEEK Intermediate CA" API_dev.cer
             }
 
             Write-Verbose "Finished creating CERT for $Subject"
