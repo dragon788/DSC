@@ -1,4 +1,4 @@
-# SEEK Ltd PowerShell Desired State Configuration Resources
+# SEEK Ltd. PowerShell Desired State Configuration Resources
 
 This project includes custom DSC resources used by SEEK Ltd.
 
@@ -19,7 +19,7 @@ The PowerShell DSC configuration is applied by the Local Configuration Manager (
 - [.Net Framework 4](http://www.microsoft.com/en-au/download/details.aspx?id=17718) required to run build
 
 ```
-PS> git clone git@github.com:SEEK-Jobs/DSC.git
+PS> git clone https://github.com/SEEK-Jobs/DSC.git
 ```
 
 ### How?
