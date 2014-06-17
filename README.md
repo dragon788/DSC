@@ -13,14 +13,17 @@ The PowerShell DSC configuration is applied by the Local Configuration Manager (
 ### Pre-requisites
 
 - Git client
-- [Windows Management Framework 4.0](http://www.microsoft.com/en-au/download/details.aspx?id=40855) required to provide PowerShell 4 and necessary cmdlets
-- Your user must have local administrator privileges
 - This project must be cloned to the local machine
-- [.Net Framework 4](http://www.microsoft.com/en-au/download/details.aspx?id=17718) required to run build
 
 ```
 PS> git clone https://github.com/SEEK-Jobs/DSC.git
 ```
+
+#### Runtime Dependencies
+
+- [Windows Management Framework 4.0](http://www.microsoft.com/en-au/download/details.aspx?id=40855) required to provide PowerShell 4 and necessary cmdlets
+- Your user must have local administrator privileges
+
 
 ### How?
 
@@ -51,7 +54,44 @@ Please see the Writing a Custom DSC Resource chapter in [The DSC book](http://po
 
 ## Testing
 
-If you wish to contribute to the SEEK DSC resources, please ensure you run the tests before sending a pull request. Tests are run using [Pester](https://github.com/pester/Pester) (a BDD test framework for PowerShell). The Pester package is included under the `Tools` directory. Tests can be found under the `Tests` directory.
+If you wish to contribute to the SEEK DSC resources, please ensure you run the tests before sending a pull request. Tests are run using [Pester](https://github.com/pester/Pester) (a BDD test framework for PowerShell). Pester tests can be found under the `Tests` directory.
+
+### Test Dependencies
+
+- [.Net Framework 4](http://www.microsoft.com/en-au/download/details.aspx?id=17718) required to run build
+- [Pester](https://github.com/pester/Pester) required to run tests
+
+
+#### Installing Pester
+
+The Pester project can be downloaded from GitHub as a [ZIP](https://github.com/pester/Pester/archive/master.zip) or cloned using [Git](https://github.com/pester/Pester.git). By default, the build expects Pester to be installed at `$(USERPROFILE)\Tools\Pester`. If you want to install Pester somewhere else you can set the `PESTER_HOME` environment variable with the install location.
+
+##### Installing Pester in the default location
+
+- Clone the Git repository:
+```
+PS> mkdir $env:USERPROFILE\Tools
+PS> cd $env:USERPROFILE\Tools
+PS> git clone https://github.com/pester/Pester.git
+```
+
+##### Installing Pester in a custom location
+
+Assuming you want to install Pester into a custom location (e.g. `D:\Tools\Pester`)
+
+- Clone the Git repository:
+```
+PS> mkdir D:\Tools
+PS> cd D:\Tools
+PS> git clone https://github.com/pester/Pester.git
+```
+- Set the `PESTER_HOME` user-level environment variable:
+```
+PS> [Environment]::SetEnvironmentVariable("PESTER_HOME", "D:\Tools\Pester", "User")
+```
+- Close the current PowerShell console
+
+### Test suite:
 
 The following command will run the full suite of tests:
 
@@ -59,7 +99,7 @@ The following command will run the full suite of tests:
 .\build.bat /t:Test
 ```
 
-### Unit tests:
+#### Unit tests:
 
 Unit tests are the most important and test the DSC resource contract. Namely the `Get-TargetResource`, `Set-TargetResource` and `Test-TargetResource` functions. The unit tests should run in isolation and mock-out any interactions with external commands or the network.
 
@@ -71,7 +111,7 @@ To run just the unit tests, use the following command:
 .\build.bat /t:UnitTest
 ```
 
-### Integration tests:
+#### Integration tests:
 
 Itegration tests are not absolutely necessary. They are however useful to get some extra confidence that your wrapper functions interact with external commands correctly.
 
@@ -81,7 +121,7 @@ Run the integration tests using the following command:
 .\build.bat /t:\TntegrationTest
 ```
 
-### E2E tests:
+#### E2E tests:
 
 Each module should have one end-to-end test. This ensures that a DSC configuration can import and utilise the custom resource. There is no other way to test that the resource schema matches the `Get-TargetResource` and `Set-targetResource` parameters. E2E tests are expensive so do not use E2E tests for exhaustive scenarios, they should simply test a single happy-days scenario.
 
