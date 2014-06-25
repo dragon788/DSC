@@ -138,7 +138,7 @@ function Invoke-WindowsUpdateStandaloneInstaller
         $Uninstall = $false
     )
 
-    $updateFile = $Update
+    $updateFile = Get-UpdateFile -Update $Update
 
     $updateArgs = @($updateFile, '/quiet', '/norestart')
     if($Uninstall)
@@ -147,6 +147,33 @@ function Invoke-WindowsUpdateStandaloneInstaller
     }
 
     Start-Process "${env:WINDIR}\system32\wusa.exe" -ArgumentList $updateArgs -Wait
+}
+
+# Downloads the update file if necssary and returns path of local file
+function Get-UpdateFile
+{
+    [OutputType([System.String])]
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Update
+
+    )
+
+    Write-Verbose "Update: ${Update}"
+
+    $uri = $Update -as [System.URI]
+    if(!$uri.IsFile)
+    {
+        # download remote file
+        $updateFile = Join-Path $env:TEMP $uri.Segments[-1]
+        Invoke-WebRequest $uri -OutFile $updateFile
+        return $updateFile
+    }
+
+    return $Update
 }
 
 Export-ModuleMember -Function *-TargetResource

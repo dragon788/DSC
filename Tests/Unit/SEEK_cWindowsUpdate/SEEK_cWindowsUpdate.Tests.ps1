@@ -80,4 +80,13 @@ Describe "Set-TargetResource" {
             Assert-MockCalled Start-Process -Exactly 1 -ParameterFilter { ($FilePath -eq "${env:WINDIR}\system32\wusa.exe") -and ($ArgumentList -contains "C:\foo.msu") -and ($argumentList -contains '/uninstall') }
         }
     }
+
+    Context "when the update is a URL" {
+        It "downloads the update file and then installs the update" {
+            Mock Invoke-WebRequest
+            Set-TargetResource -Update "http://foo.com/foo.msu" -Kb "KB4567"
+            Assert-MockCalled Invoke-WebRequest -Exactly 1 -ParameterFilter { ($Uri -eq "http://foo.com/foo.msu") }
+            Assert-MockCalled Start-Process -Exactly 1 -ParameterFilter { ($FilePath -eq "${env:WINDIR}\system32\wusa.exe") -and ($ArgumentList -contains "${env:TEMP}\foo.msu") }
+        }
+    }
 }
