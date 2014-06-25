@@ -108,7 +108,8 @@ function Install-Update
         [System.String]
         $Update
     )
-    Start-Process "${env:WINDIR}\system32\wusa.exe" -ArgumentList @($Update, '/quiet', '/norestart') -Wait
+
+    Invoke-WindowsUpdateStandaloneInstaller -Update $Update
 }
 
 function Uninstall-Update
@@ -120,9 +121,32 @@ function Uninstall-Update
         [System.String]
         $Update
     )
-    Start-Process "${env:WINDIR}\system32\wusa.exe" -ArgumentList @('/uninstall', $Update, '/quiet', '/norestart') -Wait
+
+    Invoke-WindowsUpdateStandaloneInstaller -Update $Update -Uninstall
 }
 
+function Invoke-WindowsUpdateStandaloneInstaller
+{
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Update,
 
+        [switch]
+        $Uninstall = $false
+    )
+
+    $updateFile = $Update
+
+    $updateArgs = @($updateFile, '/quiet', '/norestart')
+    if($Uninstall)
+    {
+        $updateArgs = ,'/uninstall' + $updateArgs
+    }
+
+    Start-Process "${env:WINDIR}\system32\wusa.exe" -ArgumentList $updateArgs -Wait
+}
 
 Export-ModuleMember -Function *-TargetResource
