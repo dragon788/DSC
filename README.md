@@ -25,7 +25,7 @@ PS> git clone https://github.com/SEEK-Jobs/DSC.git
 - Your user must have local administrator privileges
 
 
-### How?
+### Installation
 
 Simply run the setup script from the project (as administrator):
 
