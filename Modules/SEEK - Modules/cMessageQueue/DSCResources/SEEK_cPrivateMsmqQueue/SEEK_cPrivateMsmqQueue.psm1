@@ -47,7 +47,7 @@ function Set-TargetResource
         $MaximumJournalSize = "1024",
 
         [System.String]
-        $Label = "private$\$Name"
+        $Label = "private$\${Name}"
     )
 
     if($Ensure -eq "Absent")
@@ -144,8 +144,9 @@ function Get-QueueDetails
                 Ensure = "Present"
                 Transactional = $Queue.Transactional
                 UseJournalQueue = $Queue.UseJournalQueue
-            MaximumJournalSize = $Queue.MaximumJournalSize
-            Label = $Queue.Label}
+                MaximumJournalSize = $Queue.MaximumJournalSize
+                Label = $Queue.Label
+            }
         }
     }
     return $Details
@@ -211,9 +212,16 @@ function New-Queue
     Write-Verbose("Creating the MSMQ Queue")
     $QueuePath = (Get-QueuePath -Name $Name)
     $Queue = [System.Messaging.MessageQueue]::Create($QueuePath, $Transactional)
-    $Queue.UseJournalQueue = $UseJournalQueue
-    $Queue.MaximumJournalSize = $MaximumJournalSize
-    $Queue.Label = $Label
+    if ($Queue)
+    {
+        $Queue.UseJournalQueue = $UseJournalQueue
+        $Queue.MaximumJournalSize = $MaximumJournalSize
+        $Queue.Label = $Label
+    }
+    else
+    {
+        Write-Error "[System.Messaging.MessageQueue]::Create failed to create queue with path ${QueuePath}"
+    }
 }
 
 
@@ -226,7 +234,7 @@ function Get-QueuePath
         $Name
     )
 
-    return ".\private$\$Name"
+    return ".\private$\${Name}"
 }
 
 
@@ -243,7 +251,7 @@ function Test-NameMatchesPath
         $Name
     )
 
-    $Path -match "\$\\$Name$"
+    $Path -match "\$\\${Name}$"
 }
 
 
