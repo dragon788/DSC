@@ -33,7 +33,7 @@ function Set-TargetResource
         [System.String]
         $Ensure  = "Present",
 
-      [ValidateSet("true", "false")]
+        [ValidateSet("true", "false")]
         [System.String]
         $Transactional = "true",
 
@@ -84,7 +84,7 @@ function Test-TargetResource
         [System.String]
         $Ensure  = "Present",
 
-      [ValidateSet("true","false")]
+        [ValidateSet("true","false")]
         [System.String]
         $Transactional = "true",
 
@@ -110,8 +110,8 @@ function Test-TargetResource
             -and $Queue.State -eq $state`
             -and $Queue.Transactional -eq [System.Boolean]::Parse($Transactional) `
             -and $Queue.UseJournalQueue -eq [System.Boolean]::Parse($UseJournalQueue) `
-        -and $Queue.MaximumJournalSize -eq [int]::Parse($MaximumJournalSize) `
-        -and $Queue.Label -eq $Label)
+            -and $Queue.MaximumJournalSize -eq [int]::Parse($MaximumJournalSize) `
+            -and $Queue.Label -eq $Label)
         {
             return $true
         }
@@ -212,8 +212,8 @@ function New-Queue
     $QueuePath = (Get-QueuePath -Name $Name)
     $Queue = [System.Messaging.MessageQueue]::Create($QueuePath, $Transactional)
     $Queue.UseJournalQueue = $UseJournalQueue
-  $Queue.MaximumJournalSize = $MaximumJournalSize
-  $Queue.Label = $Label
+    $Queue.MaximumJournalSize = $MaximumJournalSize
+    $Queue.Label = $Label
 }
 
 
