@@ -285,7 +285,7 @@ function Set-AuthenticationInfo
 
     foreach ($type in @("Anonymous", "Basic", "Digest", "Windows"))
     {
-        $enabled = [boolean]$AuthenticationInfo.CimInstanceProperties[$type].Value
+        $enabled = ($AuthenticationInfo.CimInstanceProperties[$type].Value -eq $true)
         Set-Authentication -Website $Website -ApplicationName $ApplicationName -Type $type -Enabled $enabled
     }
 }
