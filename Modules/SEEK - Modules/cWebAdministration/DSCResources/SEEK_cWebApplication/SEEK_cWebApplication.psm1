@@ -5,20 +5,16 @@ function Get-TargetResource
     param
     (
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Website,
+        [System.String]$Website,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Name,
+        [System.String]$Name,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $WebAppPool,
+        [System.String]$WebAppPool,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $PhysicalPath
+        [System.String]$PhysicalPath
     )
 
     CheckDependencies
@@ -65,24 +61,19 @@ function Set-TargetResource
     param
     (
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Website,
+        [System.String]$Website,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Name,
+        [System.String]$Name,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $WebAppPool,
+        [System.String]$WebAppPool,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $PhysicalPath,
+        [System.String]$PhysicalPath,
 
         [ValidateSet("Present","Absent")]
-        [System.String]
-        $Ensure = "Present",
+        [System.String]$Ensure = "Present",
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
@@ -153,24 +144,19 @@ function Test-TargetResource
     param
     (
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Website,
+        [System.String]$Website,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $Name,
+        [System.String]$Name,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $WebAppPool,
+        [System.String]$WebAppPool,
 
         [parameter(Mandatory = $true)]
-        [System.String]
-        $PhysicalPath,
+        [System.String]$PhysicalPath,
 
         [ValidateSet("Present","Absent")]
-        [System.String]
-        $Ensure = "Present",
+        [System.String]$Ensure = "Present",
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
@@ -223,12 +209,10 @@ function ValidateWebsiteAuthentication
     (
         # website name
         [parameter()]
-        [string]
-        $Name,
+        [string]$Name,
 
         [parameter()]
-        [Microsoft.Management.Infrastructure.CimInstance]
-        $AuthenticationInfo
+        [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
 
     return compareWebsiteAuthentication -Name $Name -AuthenticationInfo $AuthenticationInfo
@@ -244,8 +228,7 @@ function compareWebsiteAuthentication
 
         [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [Microsoft.Management.Infrastructure.CimInstance]
-        $AuthenticationInfo
+        [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
     #Assume authenticationNeedUpdating
     $AuthenticationNeedsUpdating = $false
@@ -301,12 +284,10 @@ function UpdateAuthentication
     (
         [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
-        [string]
-        $Name,
+        [string]$Name,
 
         [parameter()]
-        [Microsoft.Management.Infrastructure.CimInstance]
-        $AuthenticationInfo
+        [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
 
     $AnonymousAuthentication = $AuthenticationInfo.CimInstanceProperties["Anonymous"].Value
