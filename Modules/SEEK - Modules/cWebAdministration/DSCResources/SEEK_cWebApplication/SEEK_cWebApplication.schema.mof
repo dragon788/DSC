@@ -1,4 +1,4 @@
-[ClassVersion("1.0.0")]
+[ClassVersion("1.0.1")]
 Class SEEK_cWebAuthenticationInformation
 {
     [write,ValueMap{"true", "false"},Values{"true", "false"}]string Anonymous;
@@ -12,8 +12,8 @@ class SEEK_cWebApplication : OMI_BaseResource
 {
     [Key, Description("Name of website with which web application is associated")] string Website;
     [Key, Description("Name of web application")] string Name;
-    [Required, Description("Web application pool for the web application")] string WebAppPool;
-    [Required, Description("Physical path for the web application directory")] string PhysicalPath;
+    [Write, Description("Web application pool for the web application")] string WebAppPool;
+    [Write, Description("Physical path for the web application directory")] string PhysicalPath;
     [Write, Description("Whether web application should be present or absent"), ValueMap{"Present","Absent"}, Values{"Present","Absent"}] string Ensure;
     [write, EmbeddedInstance("SEEK_cWebAuthenticationInformation"), Description("Hashtable containing authentication information (Anonymous, Basic, Digest, Windows)")] string AuthenticationInfo;
 };

@@ -8,50 +8,32 @@ function Get-TargetResource
         [System.String]$Website,
 
         [parameter(Mandatory = $true)]
-        [System.String]$Name,
-
-        [parameter(Mandatory = $true)]
-        [System.String]$WebAppPool,
-
-        [parameter(Mandatory = $true)]
-        [System.String]$PhysicalPath
+        [System.String]$Name
     )
 
     CheckDependencies
 
-    $webApplication = Get-WebApplication -Site $Website -Name $Name
-
-    $PhysicalPath = ""
-    $Ensure = "Absent"
-    $WebAppPool = ""
-
-    if ($webApplication.Count -eq 1)
+    $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
+    if ($webApplication)
     {
-        $PhysicalPath = $webApplication.PhysicalPath
-        $WebAppPool = $webApplication.applicationPool
-        $Ensure = "Present"
-
-        $AnonymousAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/AnonymousAuthentication -Name enabled -Location $Name
-        $BasicAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/BasicAuthentication -Name enabled -Location $Name
-        $DigestAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/DigestAuthentication -Name enabled -Location $Name
-        $WindowsAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/WindowsAuthentication -Name enabled -Location $Name
-
-        $CimAuthentication =
-        {
-            New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Anonymous=$AnonymousAuthentication;Basic=$BasicAuthentication;Digest=$DigestAuthentication;Windows=$WindowsAuthentication}
+        return @{
+            Website = $Website
+            Name = $Name
+            WebAppPool = $webApplication.ApplicationPool
+            PhysicalPath = $webApplication.PhysicalPath
+            Ensure = "Present"
+            AuthenticationInfo = Get-AuthenticationInfo -Website $Website -ApplicationName $Name
         }
     }
 
-    $returnValue = @{
+    return @{
         Website = $Website
         Name = $Name
-        WebAppPool = $WebAppPool
-        PhysicalPath = $PhysicalPath
-        Ensure = $Ensure
-        AuthenticationInfo = $CimAuthentication
+        WebAppPool = $null
+        PhysicalPath = $null
+        Ensure = "Absent"
+        AuthenticationInfo = $null
     }
-
-    return $returnValue
 }
 
 
@@ -80,26 +62,17 @@ function Set-TargetResource
 
     CheckDependencies
 
+
+    if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
+
+    $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
     if ($Ensure -eq "Present")
     {
-        $webApplication = Get-WebApplication -Site $Website -Name $Name
-        if ($webApplication.count -eq 0)
+
+        if ($webApplication -eq $null)
         {
             Write-Verbose "Creating new Web application $Name."
             New-WebApplication -Site $Website -Name $Name -PhysicalPath $PhysicalPath -ApplicationPool $WebAppPool
-
-            #Update Authentication settings if required
-            if ($AuthenticationInfo -ne $null)
-            {
-                if(ValidateWebsiteAuthentication -Name "$Website/$Name" -AuthenticationInfo $AuthenticationInfo)
-                {
-                    $UpdateNotRequired = $false
-                    #Update Authentication
-                    UpdateAuthentication -Name "$Website/$Name" -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
-
-                    Write-Verbose("Authentication for website $Name have been updated.");
-                }
-            }
         }
         else
         {
@@ -113,23 +86,12 @@ function Set-TargetResource
                 Write-Verbose "Updating physical path for Web application $Name."
                 Set-ItemProperty -Path IIS:Sites\$Website\$Name -Name applicationPool -Value $WebAppPool
             }
-
-            #Update Authentication settings if required
-            if ($AuthenticationInfo -ne $null)
-            {
-                Write-Verbose ("Validate Authentication information update for website $Name")
-                if(ValidateWebsiteAuthentication -Name "$Website/$Name" -AuthenticationInfo $AuthenticationInfo)
-                {
-                    #Update Authentication
-                    UpdateAuthentication -Name "$Website/$Name" -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
-
-                    Write-Verbose ("Authentication information for website $Name updated")
-                }
-            }
         }
+
+        Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
     }
 
-    if ($Ensure -eq "Absent")
+    if ($webApplication -and ($Ensure -eq "Absent"))
     {
         Write-Verbose "Removing existing Web Application $Name."
         Remove-WebApplication -Site $Website -Name $Name
@@ -163,163 +125,182 @@ function Test-TargetResource
 
     CheckDependencies
 
-    $webApplication = Get-WebApplication -Site $Website -Name $Name
+    if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
-    if ($webApplication.count -eq 1 -and $Ensure -eq "Present") {
-        if ($webApplication.physicalPath -ne $PhysicalPath)
+    $webApplication = Get-TargetResource -Website $Website -Name $Name
+
+    if($Ensure -eq "Present")
+    {
+        if(($webApplication.Ensure -eq $Ensure) `
+            -and ($webApplication.PhysicalPath -eq $PhysicalPath) `
+            -and ($webApplication.WebAppPool -eq $WebAppPool) `
+            -and (Test-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo))
         {
-            Write-Verbose "Physical path for web application $Name does not match desired state."
-            return $false
-        }
-        elseif ($webApplication.applicationPool -ne $WebAppPool)
-        {
-            Write-Verbose "Web application pool for web application $Name does not match desired state."
-            return $false
-        }
-        else
-        {
-            Write-Verbose "Web application pool matches desired state."
             return $true
         }
-
-        #Check Authentication properties
-        if($AuthenticationInfo -ne $null)
-        {
-            if(ValidateWebsiteAuthentication -Name "$Website/$Name" -AuthenticationInfo $AuthenticationInfo)
-            {
-                $DesiredConfigurationMatch = $false
-                Write-Verbose("Authentication for website $Name do not mach the desired state.");
-                break
-            }
-        }
     }
-
-    if ($webApplication.count -eq 0 -and $Ensure -eq "Absent") {
-        Write-Verbose "Web application $Name should be absent and is absent."
+    elseif($webApplication.Ensure -eq $Ensure)
+    {
         return $true
     }
 
     return $false
 }
 
-# Returns true if authentication settings is valid
-function ValidateWebsiteAuthentication
+function Find-UniqueWebApplication
 {
     Param
     (
-        # website name
-        [parameter()]
-        [string]$Name,
+        [parameter(Mandatory = $true)]
+        [System.String]$Site,
 
-        [parameter()]
-        [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
+        [parameter(Mandatory = $true)]
+        [System.String]$Name
     )
 
-    return compareWebsiteAuthentication -Name $Name -AuthenticationInfo $AuthenticationInfo
+    $webApplications = @(Get-WebApplication -Site $Site -Name $Name)
+
+    if ($webApplications -gt 1)
+    {
+        throw "Multiple web applications found for ""${Site}/${Name}"""
+    }
+
+    return $webApplications[0]
 }
 
-function compareWebsiteAuthentication
+function Test-AuthenticationEnabled
 {
+    [OutputType([System.Boolean])]
+    Param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]$WebSite,
+
+        [parameter(Mandatory = $true)]
+        [System.String]$ApplicationName,
+
+        [parameter(Mandatory = $true)]
+        [ValidateSet("Anonymous","Basic","Digest","Windows")]
+        [System.String]$Type
+    )
+
+
+    $prop = Get-WebConfigurationProperty `
+        -Filter /system.WebServer/security/authentication/${Type}Authentication `
+        -Name enabled `
+        -Location "${WebSite}/${Name}"
+    return $prop.Value
+}
+
+function Set-Authentication
+{
+    Param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]$WebSite,
+
+        [parameter(Mandatory = $true)]
+        [System.String]$ApplicationName,
+
+        [parameter(Mandatory = $true)]
+        [ValidateSet("Anonymous","Basic","Digest","Windows")]
+        [System.String]$Type,
+
+        [System.Boolean]$Enabled
+    )
+
+    Set-WebConfigurationProperty -Filter /system.WebServer/security/authentication/${Type}Authentication `
+        -Name enabled `
+        -Value $Enabled `
+        -Location "${WebSite}/${Name}"
+}
+
+function Get-AuthenticationInfo
+{
+    [OutputType([Microsoft.Management.Infrastructure.CimInstance])]
+    Param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]$WebSite,
+
+        [parameter(Mandatory = $true)]
+        [System.String]$ApplicationName
+    )
+
+    $authenticationProperties = @{}
+    foreach ($type in @("Anonymous", "Basic", "Digest", "Windows"))
+    {
+        $authenticationProperties[$type] = [string](Test-AuthenticationEnabled -Website $Website -ApplicationName $Name -Type $type)
+    }
+
+    return New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly -Property $authenticationProperties
+}
+
+function Test-AuthenticationInfo
+{
+    [OutputType([System.Boolean])]
     param
     (
-        [parameter()]
-        [string]
-        $Name,
+        [parameter(Mandatory = $true)]
+        [System.String]$Website,
+
+        [parameter(Mandatory = $true)]
+        [System.String]$ApplicationName,
 
         [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
-    #Assume authenticationNeedUpdating
-    $AuthenticationNeedsUpdating = $false
 
-    try
+    $result = $true
+
+    foreach ($type in @("Anonymous", "Basic", "Digest", "Windows"))
     {
-        $ActualAnonymousAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/AnonymousAuthentication -Name enabled -Location $Name
-        $ActualBasicAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/BasicAuthentication -Name enabled -Location $Name
-        $ActualDigestAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/DigestAuthentication -Name enabled -Location $Name
-        $ActualWindowsAuthentication = Get-WebConfigurationProperty -filter /system.WebServer/security/authentication/WindowsAuthentication -Name enabled -Location $Name
 
-        Write-Verbose("Actual Anonymous = $ActualAnonymousAuthentication")
-        Write-Verbose("Actual Basic = $ActualBasicAuthentication")
-        Write-Verbose("Actual Digest = $ActualDigestAuthentication")
-        Write-Verbose("Actual Windows = $ActualWindowsAuthentication")
-
-
-        if ($ActualAnonymousAuthentication -ne [string]$AuthenticationInfo.CimInstanceProperties["Anonymous"].Value)
+        $expected = $AuthenticationInfo.CimInstanceProperties[$type].Value
+        $actual = Test-AuthenticationEnabled -Website $Website -ApplicationName $ApplicationName -Type $type
+        if ($expected -ne $actual)
         {
-            $AuthenticationNeedsUpdating = $true
+            $result = $false
+            break
         }
-        elseif ($ActualBasicAuthentication -ne [string]$AuthenticationInfo.CimInstanceProperties["Basic"].Value)
-        {
-            $AuthenticationNeedsUpdating = $true
-        }
-        elseif ($ActualDigestAuthentication -ne [string]$AuthenticationInfo.CimInstanceProperties["Digest"].Value)
-        {
-            $AuthenticationNeedsUpdating = $true
-        }
-        elseif ($ActualWindowsAuthentication -ne [string]$AuthenticationInfo.CimInstanceProperties["Windows"].Value)
-        {
-            $AuthenticationNeedsUpdating = $true
-        }
-
-        return $AuthenticationNeedsUpdating
     }
-    catch
-    {
-        $errorId = "WebsiteAuthenticationCompareFailure";
-        $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-        $errorMessage = $($LocalizedData.WebsiteCompareFailureError) -f ${Name}
-        $exception = New-Object System.InvalidOperationException $errorMessage
-        $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
 
-        $PSCmdlet.ThrowTerminatingError($errorRecord);
-    }
+    return $result
 }
 
-
-function UpdateAuthentication
+function Set-AuthenticationInfo
 {
     param
     (
-        [parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Name,
+        [parameter(Mandatory = $true)]
+        [System.String]$WebSite,
+
+        [parameter(Mandatory = $true)]
+        [System.String]$ApplicationName,
 
         [parameter()]
+        [ValidateNotNullOrEmpty()]
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
 
-    $AnonymousAuthentication = $AuthenticationInfo.CimInstanceProperties["Anonymous"].Value
-    $BasicAuthentication = $AuthenticationInfo.CimInstanceProperties["Basic"].Value
-    $DigestAuthentication = $AuthenticationInfo.CimInstanceProperties["Digest"].Value
-    $WindowsAuthentication = $AuthenticationInfo.CimInstanceProperties["Windows"].Value
-
-    if ($AnonymousAuthentication -ne $null)
+    foreach ($type in @("Anonymous", "Basic", "Digest", "Windows"))
     {
-        Set-WebConfigurationProperty -filter /system.WebServer/security/authentication/AnonymousAuthentication -Name enabled -Value $AnonymousAuthentication -Location $Name
+        $enabled = [boolean]$AuthenticationInfo.CimInstanceProperties[$type].Value
+        Set-Authentication -Website $Website -ApplicationName $ApplicationName -Type $type -Enabled $enabled
     }
+}
 
-    if ($BasicAuthentication -ne $null)
-    {
-        Set-WebConfigurationProperty -filter /system.WebServer/security/authentication/BasicAuthentication -Name enabled -Value $BasicAuthentication -Location $Name
-    }
-
-    if ($DigestAuthentication -ne $null)
-    {
-        Set-WebConfigurationProperty -filter /system.WebServer/security/authentication/DigestAuthentication -Name enabled -Value $DigestAuthentication -Location $Name
-    }
-
-    if ($WindowsAuthentication -ne $null)
-    {
-        Set-WebConfigurationProperty -filter /system.WebServer/security/authentication/WindowsAuthentication -Name enabled -Value $WindowsAuthentication -Location $Name
-    }
+function Get-DefaultAuthenticationInfo
+{
+    New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
+        -ClientOnly `
+        -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
 }
 
 function CheckDependencies
 {
-    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
-    # Check if WebAdministration module is present for IIS cmdlets
+    Write-Verbose "Checking whether WebAdministration module is available."
     if(!(Get-Module -ListAvailable -Name WebAdministration))
     {
         Throw "Please ensure that WebAdministration module is installed."
