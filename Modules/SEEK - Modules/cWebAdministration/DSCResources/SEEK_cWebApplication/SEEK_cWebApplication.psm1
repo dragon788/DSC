@@ -14,7 +14,7 @@ function Get-TargetResource
     CheckDependencies
 
     $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
-    if ($webApplication)
+    if ($webApplication -eq $null)
     {
         return @{
             Website = $Website
@@ -90,8 +90,7 @@ function Set-TargetResource
 
         Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
     }
-
-    if ($webApplication -and ($Ensure -eq "Absent"))
+    elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
     {
         Write-Verbose "Removing existing Web Application $Name."
         Remove-WebApplication -Site $Website -Name $Name
@@ -160,7 +159,7 @@ function Find-UniqueWebApplication
 
     $webApplications = @(Get-WebApplication -Site $Site -Name $Name)
 
-    if ($webApplications -gt 1)
+    if ($webApplications.Count -gt 1)
     {
         throw "Multiple web applications found for ""${Site}/${Name}"""
     }
