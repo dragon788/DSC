@@ -14,7 +14,7 @@ function Get-TargetResource
     CheckDependencies
 
     $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
-    if ($webApplication -eq $null)
+    if ($webApplication -ne $null)
     {
         return @{
             Website = $Website
