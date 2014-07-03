@@ -176,9 +176,18 @@ function Remove-Queue
     {
         if (Test-NameMatchesPath -Name $Name -Path $Queue.QueueName)
         {
-            Write-Verbose("Removing the MSMQ Queue")
-            [System.Messaging.MessageQueue]::Delete($Queue.Path)
-            break
+            Write-Verbose("Removing the MSMQ Queue ${Name}")
+            try
+            {
+                [System.Messaging.MessageQueue]::Delete($Queue.Path)
+                Write-Verbose("Successfully removed the MSMQ queue ${Name}")
+                break
+            }
+            catch
+            {
+                Write-Error("Failed to remove the MSMQ queue ${Name}")
+                throw $_
+            }
         }
     }
 }
@@ -209,18 +218,20 @@ function New-Queue
         $Label
     )
 
-    Write-Verbose("Creating the MSMQ Queue")
+    Write-Verbose("Creating the MSMQ Queue ${Name}")
     $QueuePath = (Get-QueuePath -Name $Name)
-    $Queue = [System.Messaging.MessageQueue]::Create($QueuePath, $Transactional)
-    if ($Queue)
+    $Queue = $null
+    try
     {
+        $Queue = [System.Messaging.MessageQueue]::Create($QueuePath, $Transactional)
         $Queue.UseJournalQueue = $UseJournalQueue
         $Queue.MaximumJournalSize = $MaximumJournalSize
         $Queue.Label = $Label
     }
-    else
+    catch
     {
-        Write-Error "[System.Messaging.MessageQueue]::Create failed to create queue with path ${QueuePath}"
+        Write-Error("Failed to create the MSMQ queue ${Name}")
+        throw $_
     }
 }
 
