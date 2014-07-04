@@ -554,10 +554,13 @@ function UpdateHostFileEntry
             {
                 if ($HostEntryIPAddress -ne $null -and $HostEntryName -ne $null)
                 {
-                    if (-not (Select-String $hostFile -pattern $HostEntryName))
+                    if (-not (Select-String $hostFile -pattern "\s+$($Entry)\s*$"))
                     {
                         Add-Content $hostFile "`n$HostEntryIPAddress    $HostEntryName"
                         (Get-Content($hostFile)) | Set-Content($hostFile)
+                    }
+                    else {
+                        (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+$($Entry)\s*$", "$IpAddress    $Entry" } | Set-Content($hostFile)
                     }
                 }
             }
