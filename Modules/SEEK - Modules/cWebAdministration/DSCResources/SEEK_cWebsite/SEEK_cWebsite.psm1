@@ -992,7 +992,7 @@ function UpdateBindings
         {
             $errorId = "WebsiteBindingUpdateFailure";
             $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName} ${Name}
+            $errorMessage = $($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}
             $exception = New-Object System.InvalidOperationException $errorMessage
             $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
 
