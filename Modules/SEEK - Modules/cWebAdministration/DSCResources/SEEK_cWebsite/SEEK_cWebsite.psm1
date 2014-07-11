@@ -9,7 +9,7 @@ WebsiteDiscoveryFailureError=Failure to get the requested website "{0}" informat
 WebsiteCreationFailureError=Failure to successfully create the website "{0}".
 WebsiteRemovalFailureError=Failure to successfully remove the website "{0}".
 WebsiteUpdateFailureError=Failure to successfully update the properties for website "{0}".
-WebsiteBindingUpdateFailureError=Failure to successfully update the bindings for website "{0}".
+WebsiteBindingUpdateFailureError=Failure to successfully update the binding "{0}" for website "{1}".
 WebsiteBindingInputInvalidationError=Desired website bindings not valid for website "{0}".
 WebsiteCompareFailureError=Failure to successfully compare properties for website "{0}".
 WebBindingCertifcateError=Failure to add certificate to web binding. Please make sure that the certificate thumbprint "{0}" is valid.
@@ -992,7 +992,7 @@ function UpdateBindings
         {
             $errorId = "WebsiteBindingUpdateFailure";
             $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteUpdateFailureError) -f ${Name}
+            $errorMessage = $($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName} ${Name}
             $exception = New-Object System.InvalidOperationException $errorMessage
             $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
 
