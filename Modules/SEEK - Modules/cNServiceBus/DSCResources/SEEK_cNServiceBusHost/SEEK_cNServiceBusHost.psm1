@@ -189,7 +189,7 @@ function Install-HostService
         "-displayName=""${DisplayName}""",
         "-description=""${Description}""")
 
-    if ($StartManually) { $installArgs += "-startManually" }
+    if ([System.Convert]::ToBoolean($StartManually)) { $installArgs += "-startManually" }
     if ($DependsOn) { $installArgs += "-dependsOn=""${DependsOn}""" }
 
     Start-Process "${ApplicationRoot}\bin\${Configuration}\NServiceBus.Host.exe" `
