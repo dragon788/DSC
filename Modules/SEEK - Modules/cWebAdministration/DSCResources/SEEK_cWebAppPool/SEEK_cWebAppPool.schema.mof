@@ -3,7 +3,7 @@
 class SEEK_cWebAppPool : OMI_BaseResource
 {
     [Key, Description("Name of the Web Application Pool")] String Name;
-    [Key, Description("Name of the Web Site or Web Application using the pool")] String ApplicationName;
+    [Write, Description("Name of the Web Site or Web Application using the pool")] String ApplicationName;
     [Write, Description("Web Application Pool Present/Absent"), ValueMap{"Present","Absent"}, Values{"Present","Absent"}] String Ensure;
     [Write, Description("State of Web Application Pool"), ValueMap{"Started","Stopped"}, Values{"Started","Stopped"}] String State;
     [write,ValueMap{"v4.0","v2.0","No Managed Code"},Values{"v4.0","v2.0",""}] string ManagedRuntimeVersion;

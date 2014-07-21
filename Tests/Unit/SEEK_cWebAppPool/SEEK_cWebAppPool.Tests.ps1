@@ -17,7 +17,7 @@ Describe "Get-TargetResource" {
         Mock Get-Item {return @($MockAppPool)} -ParameterFilter {$Path -eq "IIS:\AppPools\*"}
 
         It "returns the application pool state as a hashtable" {
-            $AppPool = Get-TargetResource -Name "MyAppPool" -ApplicationName "MyApplication"
+            $AppPool = Get-TargetResource -Name "MyAppPool"
             $AppPool.Name | Should Be "MyAppPool"
             $AppPool.ApplicationName | Should Be "MyApplication"
             $AppPool.Ensure | Should Be "Present"
@@ -35,7 +35,7 @@ Describe "Get-TargetResource" {
         Mock Get-Item {return @()} -ParameterFilter {$Path -eq "IIS:\AppPools\*"}
 
         It "Get-TargetResource returns an absent application pool hashtable" {
-            $AppPool = Get-TargetResource -Name "NewAppPool" -ApplicationName "MyApplication"
+            $AppPool = Get-TargetResource -Name "NewAppPool"
             $AppPool.Name | should be "NewAppPool"
             $AppPool.ApplicationName | Should Be "MyApplication"
             $AppPool.Ensure | should be "Absent"
