@@ -1,11 +1,15 @@
-<Project DefaultTargets="Test" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="All" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">$(WINDIR)\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
     <PESTER_HOME Condition=" '$(PESTER_HOME)'=='' ">$(USERPROFILE)\Tools\Pester</PESTER_HOME>
     <PesterExe Condition=" '$(PesterExe)'=='' ">$(PESTER_HOME)\bin\pester.bat</PesterExe>
   </PropertyGroup>
 
-  <Target Name="Test" DependsOnTargets="UnitTest;IntegrationTest;E2ETest">
+  <Target Name="All" DependsOnTargets="UnitTest;IntegrationTest;E2ETest">
+  </Target>
+
+  <Target Name="Test">
+    <Exec Command="cmd /c $(PesterExe) -Path $(Path) -TestName $(TestName)"/>
   </Target>
 
   <Target Name="UnitTest">

@@ -63,7 +63,7 @@ function Get-TargetResource
         {
             $errorId = "WebsiteDiscoveryFailure";
             $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteUpdateFailureError) -f ${Name}
+            $errorMessage = $($LocalizedData.WebsiteDiscoveryFailure) -f ${Name}
             $exception = New-Object System.InvalidOperationException $errorMessage
             $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
 
@@ -72,7 +72,7 @@ function Get-TargetResource
 
         # Add all Website properties to the hash table
         $getTargetResourceResult = @{
-                                        Name = $Website.Name;
+                                        Name = $Name;
                                         Ensure = $ensureResult;
                                         PhysicalPath = $Website.physicalPath;
                                         State = $Website.state;
