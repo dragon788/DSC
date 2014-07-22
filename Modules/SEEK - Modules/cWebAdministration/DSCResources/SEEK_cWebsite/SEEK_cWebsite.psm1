@@ -896,14 +896,6 @@ function compareWebsiteBindings
                         $BindingNeedsUpdating = $true
                         break
                     }
-
-                    $SslFlags = Get-WebConfigurationProperty -pspath IIS:\Sites -location $Name -filter "system.webServer/security/access" -name "sslFlags"
-
-                    if (!$SslFlags -ne [string]$Binding.CimInstanceProperties["SslFlags"].Value)
-                    {
-                        $BindingNeedsUpdating = $true
-                        break
-                    }
                 }
                 else
                 {
