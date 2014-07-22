@@ -15,10 +15,15 @@ $MockWebsite = New-Object PSObject -Property @{
     count = 1 # behaving like a ConfigurationElement object with a single element
 }
 
-$MockBinding = New-Object PSObject -Property @{
+$MockHttpBinding = New-Object PSObject -Property @{
+    bindingInformation = "192.168.0.1:80:www.mysite.com"
+    protocol = "http"
+}
+
+$MockHttpsBinding = New-Object PSObject -Property @{
     bindingInformation = "192.168.200.1:443:www.mysite.com"
     protocol = "https"
-    certificateHash = "35425345"
+    certificateHash = "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E"
     certificateStoreName = "Cert://localmachine/my"
 }
 
@@ -33,7 +38,7 @@ Describe "Get-TargetResource" {
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication")}
         Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
-        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockBinding)}} `
+        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpsBinding)}} `
             -ParameterFilter {$Name -eq "Bindings"}
 
         It "returns the web site state as a hashtable" {
@@ -48,7 +53,7 @@ Describe "Get-TargetResource" {
             $WebSite.BindingInfo.Protocol | Should Be "https"
             $WebSite.BindingInfo.IPAddress | Should Be "192.168.200.1"
             $WebSite.BindingInfo.HostName | Should Be "www.mysite.com"
-            $WebSite.BindingInfo.CertificateThumbprint | Should Be "35425345"
+            $WebSite.BindingInfo.CertificateThumbprint | Should Be "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E"
             $WebSite.BindingInfo.CertificateStoreName | Should Be "Cert://localmachine/my"
             $WebSite.AuthenticationInfo.Anonymous | Should Be "true"
             $WebSite.AuthenticationInfo.Basic | Should Be "false"
@@ -81,6 +86,57 @@ Describe "Get-TargetResource" {
             try { Get-TargetResource -Name "MySite" }
             catch { $exception = $_ }
             $exception | Should Not Be $null
+        }
+    }
+}
+
+Describe "Test-TargetResource" {
+    #Test-TargetResource -Name -PhysicalPath -ApplicationPool -BindingInfo -HostFileInfo -AuthenticationInfo
+    Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
+        -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("AnonymousAuthentication")}
+    Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
+        -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("BasicAuthentication")}
+    Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
+        -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication")}
+    Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
+        -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
+    Mock Get-ItemProperty {"C:\foo"} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath"}
+    Mock Get-Website {New-Object PSObject -Property @{name = "MySite"; state = "Started"; physicalPath = "C:\foo"; applicationPool = "MyAppPool"; count = 1}}
+    $AuthenticationInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly `
+        -Property @{Anonymous = $true; Basic = $false; Digest = $false; Windows = $true}
+    $BindingInfo = @(
+        New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]443;Protocol="https";IPAddress="192.168.200.1";HostName="www.mysite.com";CertificateThumbprint="6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E";CertificateStoreName="Cert://localmachine/my"} -ClientOnly
+        New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.mysite.com"} -ClientOnly
+    )
+    Mock Get-WebBinding {@($MockHttpsBinding, $MockHttpBinding)}
+
+    Context "when the web site is in the desired state" {
+        It "returns true" {
+            Test-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo | Should Be $true
+        }
+    }
+
+    Context "when the web site differs from the desired state" {
+
+        It "returns false if the physical path is different" {
+            Mock Get-Website {New-Object PSObject -Property @{name = "MySite"; state = "Started"; physicalPath = "C:\foo"; count = 1}}
+            Test-TargetResource -Name "MySite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo | Should Be $false
+        }
+
+        It "returns false if the state is different" {
+            Test-TargetResource -Name "MySite" -State "Stopped" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo | Should Be $false
+        }
+
+        It "returns false if the application pool is different" {
+            Test-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "OtherAppPool" -AuthenticationInfo $AuthenticationInfo | Should Be $false
+        }
+
+        It "returns false if the bindings are different" {
+            $BindingInfo = @(
+                New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]443;Protocol="https";IPAddress="192.168.200.1";HostName="www.mysite.com";CertificateThumbprint="6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E";CertificateStoreName="Cert://localmachine/my"} -ClientOnly
+                New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.2";HostName="www.mysite.com"} -ClientOnly
+            )
+            Test-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo | Should Be $false
         }
     }
 }
