@@ -959,7 +959,6 @@ function UpdateBindings
         $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
         $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
         $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
-        $SslFlags = $Binding.CimInstanceProperties["SslFlags"].Value
 
         if ($Protocol -eq 'net.pipe')
         {
@@ -1000,15 +999,6 @@ function UpdateBindings
 
                 $NewWebbinding = get-WebBinding -name $Name -Port $Port
                 $newwebbinding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
-            }
-
-            if ($SslFlags -ne $null)
-            {
-                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
-            }
-            else
-            {
-                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value ""
             }
         }
         catch
