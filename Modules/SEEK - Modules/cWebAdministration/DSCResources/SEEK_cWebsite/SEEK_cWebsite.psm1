@@ -289,7 +289,7 @@ function Set-TargetResource
             try
             {
                 #Workaround for bug when there are no websites then New-Website fails
-                if (@(Get-Website).count -eq 0) {
+                if ((Get-Website).count -eq 0) {
                     $psboundparameters.Add("Id", 1)
                 }
                 $Website = New-Website @psboundparameters
