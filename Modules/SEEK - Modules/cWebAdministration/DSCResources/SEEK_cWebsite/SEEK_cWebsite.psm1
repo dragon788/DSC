@@ -61,7 +61,7 @@ function Get-TargetResource
         }
         else # Multiple websites with the same name exist. This is not supported and is an error
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "WebsiteDiscoveryFailure" `
                 -ErrorMessage  ($($LocalizedData.WebsiteDiscoveryFailure) -f ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
@@ -225,7 +225,7 @@ function Set-TargetResource
 
                             if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
                             {
-                                Throw-TerminatingError `
+                                ThrowTerminatingError `
                                     -ErrorId "WebsiteBindingConflictOnStart" `
                                     -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
                                     -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
@@ -241,7 +241,7 @@ function Set-TargetResource
                     }
                     catch
                     {
-                        Throw-TerminatingError `
+                        ThrowTerminatingError `
                             -ErrorId "WebsiteStateFailure" `
                             -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
                             -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -259,7 +259,7 @@ function Set-TargetResource
                     }
                     catch
                     {
-                        Throw-TerminatingError `
+                        ThrowTerminatingError `
                             -ErrorId "WebsiteStateFailure" `
                             -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
                             -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -330,7 +330,7 @@ function Set-TargetResource
             }
             catch
             {
-                Throw-TerminatingError `
+                ThrowTerminatingError `
                     -ErrorId "WebsiteCreationFailure" `
                     -ErrorMessage  ($($LocalizedData.FeatureCreationFailureError) -f ${Name}) `
                     -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -356,7 +356,7 @@ function Set-TargetResource
         }
         catch
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "WebsiteRemovalFailure" `
                 -ErrorMessage  ($($LocalizedData.WebsiteRemovalFailureError) -f ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -557,7 +557,7 @@ function UpdateHostFileEntry
         }
         Catch
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "HostEntryUpdateFailure" `
                 -ErrorMessage  ($($LocalizedData.HostEntryUpdateFailure) -f ${HostEntryName, HostEntryIPAddress}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -580,7 +580,7 @@ function ValidateWebsite
     # Hence we restrict user to request only one website information in a single request.
     if($Website.Count-gt 1)
     {
-        Throw-TerminatingError `
+        ThrowTerminatingError `
                 -ErrorId "WebsiteDiscoveryFailure" `
                 -ErrorMessage  ($($LocalizedData.WebsiteDiscoveryFailureError) -f ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
@@ -633,7 +633,7 @@ function ValidateWebsiteBindings
 
         if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "WebsiteBindingInputInvalidation" `
                 -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
@@ -898,7 +898,7 @@ function compareWebsiteBindings
     }
     catch
     {
-        Throw-TerminatingError `
+        ThrowTerminatingError `
                 -ErrorId "WebsiteCompareFailure" `
                 -ErrorMessage  ($($LocalizedData.WebsiteCompareFailureError) -f ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -961,7 +961,7 @@ function UpdateBindings
         }
         Catch
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "WebsiteBindingUpdateFailure" `
                 -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -981,7 +981,7 @@ function UpdateBindings
         }
         catch
         {
-            Throw-TerminatingError `
+            ThrowTerminatingError `
                 -ErrorId "WebBindingCertifcateError" `
                 -ErrorMessage  ($($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint}) `
                 -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
@@ -1024,14 +1024,14 @@ function Get-HostsFilePath
     return [Environment]::SystemDirectory + "\drivers\etc\hosts"
 }
 
-function Throw-TerminatingError
+function ThrowTerminatingError
 {
     param
     (
         [System.String]$ErrorId,
         [System.String]$ErrorMessage,
         [System.Management.Automation.ErrorCategory]$ErrorCategory,
-        [System.Management.Automation.ErrorRecord]$Exception = $null
+        [System.Exception]$Exception = $null
     )
 
     $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
