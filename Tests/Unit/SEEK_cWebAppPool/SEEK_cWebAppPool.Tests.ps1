@@ -19,7 +19,6 @@ Describe "Get-TargetResource" {
         It "returns the application pool state as a hashtable" {
             $AppPool = Get-TargetResource -Name "MyAppPool"
             $AppPool.Name | Should Be "MyAppPool"
-            $AppPool.ApplicationName | Should Be "MyApplication"
             $AppPool.Ensure | Should Be "Present"
             $AppPool.State | Should Be "Started"
             $AppPool.managedRuntimeVersion | Should Be "v4.0"
@@ -37,7 +36,6 @@ Describe "Get-TargetResource" {
         It "Get-TargetResource returns an absent application pool hashtable" {
             $AppPool = Get-TargetResource -Name "NewAppPool"
             $AppPool.Name | should be "NewAppPool"
-            $AppPool.ApplicationName | Should Be "MyApplication"
             $AppPool.Ensure | should be "Absent"
             $AppPool.State | should be "Stopped"
         }
