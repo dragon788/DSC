@@ -326,19 +326,47 @@ Describe "Set-TargetResource" {
         }
     }
 
-    <#
-    Context "when a host file entry already exists" {
-        It "updates the host file" {
-            Set-TargetResource -Name "MySite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            #Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath" -and $Value -eq "C:\bar"}
+    Context "when hosts are specified" {
+        $hostsFilePath = "TestDrive:\hosts"
+        Mock Get-HostsFilePath {$hostsFilePath}
+        $hostFileInfo = @(New-CimInstance -ClassName SEEK_cHostEntryFileInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{ RequireHostFileEntry = "true"; HostEntryName = "www.mysite.com"; HostIpAddress = "192.168.200.1" } -ClientOnly)
+
+        It "leaves the hosts file unchanged if a hosts file entry already exists with the same IP address" {
+            Set-Content $hostsFilePath -value "192.168.200.1    www.mysite.com"
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo -HostFileInfo $hostFileInfo
+            (Get-Content $hostsFilePath) -join "`n" | Should Be "192.168.200.1    www.mysite.com"
+        }
+
+        It "updates the hosts file entry with the new IP address if a hosts file entry already exists for a different IP address"{
+            Set-Content $hostsFilePath -value "192.168.200.3    www.mysite.com"
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo -HostFileInfo $hostFileInfo
+            (Get-Content $hostsFilePath) -join "`n" | Should Be "192.168.200.1    www.mysite.com"
+        }
+
+        It "adds a new entry to the hosts file if a hosts file entry does not exist" {
+            Set-Content $hostsFilePath -value "192.168.200.3    www.othersite.com"
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo -HostFileInfo $hostFileInfo
+            (Get-Content $hostsFilePath) -join "`n" | Should Be "192.168.200.3    www.othersite.com`n`n192.168.200.1    www.mysite.com"
+        }
+
+        It "adds a new entry to the hosts file if the hosts file is empty" {
+            Set-Content $hostsFilePath -value ""
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo -HostFileInfo $hostFileInfo
+            (Get-Content $hostsFilePath) -join "`n" | Should Be "`n`n192.168.200.1    www.mysite.com"
         }
     }
 
-    Context "when a host file entry does not exist" {
-        It "adds a new entry to the host file" {
-            Set-TargetResource -Name "MySite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            #Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath" -and $Value -eq "C:\bar"}
+    Context "when hosts are specified but not required" {
+        $hostsFilePath = "TestDrive:\hosts"
+        Mock Get-HostsFilePath {$hostsFilePath}
+        $hostFileInfo = @(New-CimInstance -ClassName SEEK_cHostEntryFileInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{ RequireHostFileEntry = "false"; HostEntryName = "www.mysite.com"; HostIpAddress = "192.168.200.1" } -ClientOnly)
+
+        It "leaves the hosts file unchanged" {
+            Set-Content $hostsFilePath -value "192.168.200.3    www.othersite.com"
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo -HostFileInfo $hostFileInfo
+            (Get-Content $hostsFilePath) -join "`n" | Should Be "192.168.200.3    www.othersite.com"
         }
     }
-    #>
+
+
 }

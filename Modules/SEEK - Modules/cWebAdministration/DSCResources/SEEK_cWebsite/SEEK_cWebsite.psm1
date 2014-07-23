@@ -544,7 +544,7 @@ function UpdateHostFileEntry
         $HostFileInfo
     )
 
-    $hostFile = [Environment]::SystemDirectory + "\drivers\etc\hosts"
+    $hostFile = Get-HostsFilePath
 
     foreach($aHostFileInfo in $HostFileInfo)
     {
@@ -558,13 +558,13 @@ function UpdateHostFileEntry
             {
                 if ($HostEntryIPAddress -ne $null -and $HostEntryName -ne $null)
                 {
-                    if (-not (Select-String $hostFile -pattern "\s+$($Entry)\s*$"))
+                    if (-not (Select-String $hostFile -pattern "\s+${HostEntryName}\s*$"))
                     {
                         Add-Content $hostFile "`n$HostEntryIPAddress    $HostEntryName"
                         (Get-Content($hostFile)) | Set-Content($hostFile)
                     }
                     else {
-                        (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+$($Entry)\s*$", "$IpAddress    $Entry" } | Set-Content($hostFile)
+                        (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+${HostEntryName}\s*$", "$HostEntryIPAddress    $HostEntryName" } | Set-Content($hostFile)
                     }
                 }
             }
@@ -1045,6 +1045,11 @@ function get-WebBindingObject
     $WebBindingObject = New-Object PSObject -Property @{Protocol = $BindingInfo.protocol;IPAddress = $IPAddress;Port = $Port;HostName = $HostName;CertificateThumbprint = $BindingInfo.CertificateHash;CertificateStoreName = $BindingInfo.CertificateStoreName}
 
     return $WebBindingObject
+}
+
+function Get-HostsFilePath
+{
+    return [Environment]::SystemDirectory + "\drivers\etc\hosts"
 }
 
 #endregion
