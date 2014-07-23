@@ -174,7 +174,11 @@ function Set-TargetResource
                 }
             }
 
-            Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+            if (!(Test-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo))
+            {
+                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+                Write-Verbose ("Authentication information for website $Name has been updated.")
+            }
 
             #Update host entry if required
             if ($HostFileInfo -ne $null)

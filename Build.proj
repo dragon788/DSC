@@ -8,7 +8,11 @@
   <Target Name="All" DependsOnTargets="UnitTest;IntegrationTest;E2ETest">
   </Target>
 
-  <Target Name="Test">
+  <Target Name="TestPath">
+    <Exec Command="cmd /c $(PesterExe) -Path $(Path)"/>
+  </Target>
+
+  <Target Name="TestName">
     <Exec Command="cmd /c $(PesterExe) -Path $(Path) -TestName $(TestName)"/>
   </Target>
 

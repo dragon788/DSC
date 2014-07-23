@@ -148,14 +148,14 @@ Describe "Test-TargetResource" {
 }
 
 Describe "Set-TargetResource" {
-    Mock New-Website {return $MockWebsite}
+    Mock New-Website {$MockWebsite}
     Mock Stop-Website
     Mock Start-Website
     Mock Remove-Website
-    Mock Set-ItemProperty
-    Mock Clear-ItemProperty
-    Mock New-ItemProperty
-    Mock Set-WebConfigurationProperty
+    Mock Clear-ItemProperty {}
+    Mock New-ItemProperty {}
+    Mock Set-WebConfigurationProperty {}
+    Mock Set-ItemProperty {}
 
     $AuthenticationInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly `
         -Property @{Anonymous = $true; Basic = $false; Digest = $false; Windows = $true}
@@ -168,40 +168,46 @@ Describe "Set-TargetResource" {
         Mock Get-Website {$null}
 
         It "creates a new web site with an ID of 1" {
+            Mock New-Website -Verifiable -ParameterFilter {$Id -eq 1}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled New-Website -Exactly 1 -ParameterFilter {$Id -eq 1}
+            Assert-VerifiableMocks
         }
     }
 
     Context "when web site is absent" {
+
         Mock Get-Website {New-Object PSObject -Property @{name = "OtherSite"}}
 
         It "creates a new web site" {
+            Mock New-Website -Verifiable -ParameterFilter {$Name -eq "MySite" -and $PhysicalPath -eq "C:\foo" -and $ApplicationPool -eq "MyAppPool"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled New-Website -Exactly 1 -ParameterFilter {$Name -eq "MySite" -and $PhysicalPath -eq "C:\foo" -and $ApplicationPool -eq "MyAppPool"}
+            Assert-VerifiableMocks
         }
 
         It "creates new bindings" {
+            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "http" -and $Value.BindingInformation -eq "192.168.0.1:80:www.mysite.com"}
+            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "https" -and $Value.BindingInformation -eq "192.168.200.1:443:www.mysite.com"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled New-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $($Value.Protocol) -eq "http"}
-            Assert-MockCalled New-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $($Value.Protocol) -eq "https"}
+            Assert-VerifiableMocks
         }
 
         It "sets the protocols enabled" {
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols" -and $Value -eq "https,http"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols" -and $Value -eq "http,https"}
+            Assert-VerifiableMocks
         }
 
         It "creates new authentication info" {
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("AnonymousAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("BasicAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("AnonymousAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("BasicAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("DigestAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("WindowsAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
+            Assert-VerifiableMocks
         }
     }
 
@@ -216,25 +222,28 @@ Describe "Set-TargetResource" {
         }
 
         It "updates the existing web site" {
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath" -and $Value -eq "C:\bar"}
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "applicationPool" -and $Value -eq "NewAppPool"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\bar" -ApplicationPool "NewAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath" -and $Value -eq "C:\bar"}
-            Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "applicationPool" -and $Value -eq "NewAppPool"}
+            Assert-VerifiableMocks
         }
 
         It "replaces the bindings" {
             Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpsBinding)}} `
                 -ParameterFilter {$Name -eq "Bindings"}
+            Mock Clear-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
+            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "http" -and $Value.BindingInformation -eq "192.168.0.1:80:www.mysite.com"}
+            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "https" -and $Value.BindingInformation -eq "192.168.200.1:443:www.mysite.com"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Clear-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
-            Assert-MockCalled New-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value -eq @{Protocol="http";BindingInformation="192.168.0.1:80:www.mysite.com"}}
-            Assert-MockCalled New-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value -eq @{Protocol="https";BindingInformation="192.168.200.3:443:www.mysite.com";CertificateThumbprint="6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E";CertificateStoreName="Cert://localmachine/my"}}
+            Assert-VerifiableMocks
         }
 
         It "updates the protocols enabled" {
             Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpsBinding)}} `
                 -ParameterFilter {$Name -eq "Bindings"}
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols" -and $Value -eq "https,http"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Set-ItemProperty -Exactly 1 -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols" -and $Value -eq "http,https"}
+            Assert-VerifiableMocks
         }
 
         It "updates the authentication info" {
@@ -244,37 +253,40 @@ Describe "Set-TargetResource" {
                 -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("BasicAuthentication")}
             Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
                 -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication")}
-            Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
+            Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
                 -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("AnonymousAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("BasicAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
+            Mock Set-WebConfigurationProperty -Verifiable `
+                -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
             $AuthenticationInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly `
                 -Property @{Anonymous = $false; Basic = $true; Digest = $true; Windows = $true}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("AnonymousAuthentication") -and $Name -eq "enabled" -and $Value -eq $false -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("BasicAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("DigestAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
-            Assert-MockCalled Set-WebConfigurationProperty -Exactly 1 `
-                -ParameterFilter {$Filter.EndsWith("WindowsAuthentication") -and $Name -eq "enabled" -and $Value -eq $true -and $Location -eq "MySite"}
+            Assert-VerifiableMocks
         }
     }
 
     Context "when desired state is equal to the web site state" {
         Mock Get-Website {$MockWebsite}
+        Mock Set-ItemProperty {}
         Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("AnonymousAuthentication")}
         Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("BasicAuthentication")}
         Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("DigestAuthentication")}
-        Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $false}} `
+        Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
-        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpBinding, $MockHttpsBinding)}} `
+        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpsBinding, $MockHttpBinding)}} `
                 -ParameterFilter {$Name -eq "Bindings"}
+        Mock Get-ItemProperty {"C:\foo"} -ParameterFilter {$Name -eq "physicalPath"}
 
         It "does nothing" {
-            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo
             Assert-MockCalled New-Website -Times 0
             Assert-MockCalled Set-ItemProperty -Times 0
             Assert-MockCalled Set-WebConfigurationProperty -Times 0
@@ -287,9 +299,10 @@ Describe "Set-TargetResource" {
         Mock Get-Website {New-Object PSObject -Property @{state = "Started"; applicationPool = "MyAppPool"; name = "MySite"; physicalPath = "C:\inetpub\wwwroot\mysite"; count = 1}}
 
         It "stops the web site" {
+            Mock Stop-Website -Verifiable -ParameterFilter {$Name -eq "MySite"}
             Set-TargetResource -Name "MySite" -State "Stopped" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Stop-Website -Times 1 -ParameterFilter {$Name -eq "MySite"}
             Assert-MockCalled Start-Website -Times 0
+            Assert-VerifiableMocks
         }
     }
 
@@ -297,8 +310,9 @@ Describe "Set-TargetResource" {
         Mock Get-Website {New-Object PSObject -Property @{state = "Stopped"; applicationPool = "MyAppPool"; name = "MySite"; physicalPath = "C:\inetpub\wwwroot\mysite"; count = 1}}
 
         It "starts the web site" {
+            Mock Start-Website -Verifiable -ParameterFilter {$Name -eq "MySite"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Start-Website -Exactly 1 -ParameterFilter {$Name -eq "MySite"}
+            Assert-VerifiableMocks
         }
     }
 
@@ -306,8 +320,9 @@ Describe "Set-TargetResource" {
         Mock Get-Website {$MockWebsite}
 
         It "removes the web site" {
+            Mock Remove-website -Verifiable -ParameterFilter {$Name -eq "MySite"}
             Set-TargetResource -Name "MySite" -Ensure "Absent" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
-            Assert-MockCalled Remove-website -Exactly 1 -ParameterFilter {$Name -eq "MySite"}
+            Assert-VerifiableMocks
         }
     }
 
