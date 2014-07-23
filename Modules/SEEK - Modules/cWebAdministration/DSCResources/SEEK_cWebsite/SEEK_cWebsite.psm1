@@ -1031,7 +1031,7 @@ function Throw-TerminatingError
         [System.String]$ErrorId,
         [System.String]$ErrorMessage,
         [System.Management.Automation.ErrorCategory]$ErrorCategory,
-        [System.Management.Automation.ErrorRecord]$Exception = $null
+        [System.Exception]$Exception = $null
     )
 
     $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
