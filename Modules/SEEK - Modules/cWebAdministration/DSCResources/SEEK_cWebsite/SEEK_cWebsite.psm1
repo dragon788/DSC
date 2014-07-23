@@ -61,13 +61,11 @@ function Get-TargetResource
         }
         else # Multiple websites with the same name exist. This is not supported and is an error
         {
-            $errorId = "WebsiteDiscoveryFailure";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteDiscoveryFailure) -f ${Name}
-            $exception = New-Object System.InvalidOperationException $errorMessage
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
+            Throw-TerminatingError `
+                -ErrorId "WebsiteDiscoveryFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteDiscoveryFailure) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
 
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
         }
 
         # Add all Website properties to the hash table
@@ -227,14 +225,10 @@ function Set-TargetResource
 
                             if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
                             {
-                                #return error & Do not start Website
-                                $errorId = "WebsiteBindingConflictOnStart";
-                                $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-                                $errorMessage = $($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}
-                                $exception = New-Object System.InvalidOperationException $errorMessage
-                                $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-                                $PSCmdlet.ThrowTerminatingError($errorRecord);
+                                Throw-TerminatingError `
+                                    -ErrorId "WebsiteBindingConflictOnStart" `
+                                    -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
+                                    -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
                             }
                         }
                     }
@@ -247,13 +241,11 @@ function Set-TargetResource
                     }
                     catch
                     {
-                        $errorId = "WebsiteStateFailure";
-                        $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidOperation;
-                        $errorMessage = $($LocalizedData.WebsiteStateFailureError) -f ${Name} ;
-                        $exception = New-Object System.InvalidOperationException $errorMessage ;
-                        $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-                        $PSCmdlet.ThrowTerminatingError($errorRecord);
+                        Throw-TerminatingError `
+                            -ErrorId "WebsiteStateFailure" `
+                            -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
+                            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                            -Exception ($_.exception)
                     }
 
                 }
@@ -267,13 +259,11 @@ function Set-TargetResource
                     }
                     catch
                     {
-                        $errorId = "WebsiteStateFailure";
-                        $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidOperation;
-                        $errorMessage = $($LocalizedData.WebsiteStateFailureError) -f ${Name} ;
-                        $exception = New-Object System.InvalidOperationException $errorMessage ;
-                        $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-                        $PSCmdlet.ThrowTerminatingError($errorRecord)
+                        Throw-TerminatingError `
+                            -ErrorId "WebsiteStateFailure" `
+                            -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
+                            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                            -Exception ($_.exception)
                     }
                 }
 
@@ -340,13 +330,11 @@ function Set-TargetResource
             }
             catch
             {
-                $errorId = "WebsiteCreationFailure";
-                $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidOperation;
-                $errorMessage = $($LocalizedData.FeatureCreationFailureError) -f ${Name} ;
-                $exception = New-Object System.InvalidOperationException $errorMessage ;
-                $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-                $PSCmdlet.ThrowTerminatingError($errorRecord);
+                Throw-TerminatingError `
+                    -ErrorId "WebsiteCreationFailure" `
+                    -ErrorMessage  ($($LocalizedData.FeatureCreationFailureError) -f ${Name}) `
+                    -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                    -Exception ($_.exception)
             }
         }
     }
@@ -368,13 +356,11 @@ function Set-TargetResource
         }
         catch
         {
-            $errorId = "WebsiteRemovalFailure";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidOperation;
-            $errorMessage = $($LocalizedData.WebsiteRemovalFailureError) -f ${Name} ;
-            $exception = New-Object System.InvalidOperationException $errorMessage ;
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
+            Throw-TerminatingError `
+                -ErrorId "WebsiteRemovalFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteRemovalFailureError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
         }
 
     }
@@ -571,13 +557,11 @@ function UpdateHostFileEntry
         }
         Catch
         {
-            $errorId = "HostEntryUpdateFailure";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.HostEntryUpdateFailure) -f ${HostEntryName, HostEntryIPAddress}
-            $exception = New-Object System.InvalidOperationException $errorMessage
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
+            Throw-TerminatingError `
+                -ErrorId "HostEntryUpdateFailure" `
+                -ErrorMessage  ($($LocalizedData.HostEntryUpdateFailure) -f ${HostEntryName, HostEntryIPAddress}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
         }
     }
 }
@@ -596,13 +580,10 @@ function ValidateWebsite
     # Hence we restrict user to request only one website information in a single request.
     if($Website.Count-gt 1)
     {
-        $errorId = "WebsiteDiscoveryFailure";
-        $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-        $errorMessage = $($LocalizedData.WebsiteDiscoveryFailureError) -f ${Name}
-        $exception = New-Object System.InvalidOperationException $errorMessage
-        $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-        $PSCmdlet.ThrowTerminatingError($errorRecord);
+        Throw-TerminatingError `
+                -ErrorId "WebsiteDiscoveryFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteDiscoveryFailureError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
     }
 }
 
@@ -652,13 +633,10 @@ function ValidateWebsiteBindings
 
         if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
         {
-            $errorId = "WebsiteBindingInputInvalidation";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}
-            $exception = New-Object System.InvalidOperationException $errorMessage
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
+            Throw-TerminatingError `
+                -ErrorId "WebsiteBindingInputInvalidation" `
+                -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
         }
     }
 
@@ -920,13 +898,11 @@ function compareWebsiteBindings
     }
     catch
     {
-        $errorId = "WebsiteCompareFailure";
-        $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-        $errorMessage = $($LocalizedData.WebsiteCompareFailureError) -f ${Name}
-        $exception = New-Object System.InvalidOperationException $errorMessage
-        $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-        $PSCmdlet.ThrowTerminatingError($errorRecord);
+        Throw-TerminatingError `
+                -ErrorId "WebsiteCompareFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteCompareFailureError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
     }
 }
 
@@ -985,13 +961,11 @@ function UpdateBindings
         }
         Catch
         {
-            $errorId = "WebsiteBindingUpdateFailure";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidResult
-            $errorMessage = $($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}
-            $exception = New-Object System.InvalidOperationException $errorMessage
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
+            Throw-TerminatingError `
+                -ErrorId "WebsiteBindingUpdateFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
         }
 
         try
@@ -1007,13 +981,11 @@ function UpdateBindings
         }
         catch
         {
-            $errorId = "WebBindingCertifcateError";
-            $errorCategory = [System.Management.Automation.ErrorCategory]::InvalidOperation;
-            $errorMessage = $($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint} ;
-            $exception = New-Object System.InvalidOperationException $errorMessage ;
-            $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $errorId, $errorCategory, $null
-
-            $PSCmdlet.ThrowTerminatingError($errorRecord);
+            Throw-TerminatingError `
+                -ErrorId "WebBindingCertifcateError" `
+                -ErrorMessage  ($($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
         }
     }
 
@@ -1050,6 +1022,21 @@ function get-WebBindingObject
 function Get-HostsFilePath
 {
     return [Environment]::SystemDirectory + "\drivers\etc\hosts"
+}
+
+function Throw-TerminatingError
+{
+    param
+    (
+        [System.String]$ErrorId,
+        [System.String]$ErrorMessage,
+        [System.Management.Automation.ErrorCategory]$ErrorCategory,
+        [System.Management.Automation.ErrorRecord]$Exception = $null
+    )
+
+    $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
+    $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $ErrorId, $ErrorCategory, $null
+    $PSCmdlet.ThrowTerminatingError($errorRecord);
 }
 
 #endregion

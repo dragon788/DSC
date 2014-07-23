@@ -326,6 +326,16 @@ Describe "Set-TargetResource" {
         }
     }
 
+    Context "when bindings are not unique" {
+        It "terminates the creation of the web site" {
+            Mock Throw-TerminatingError {} -Verifiable
+            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.mysite.com"} -ClientOnly
+            $BindingInfo = @($httpBinding, $httpBinding)
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
+            Assert-VerifiableMocks
+        }
+    }
+
     Context "when hosts are specified" {
         $hostsFilePath = "TestDrive:\hosts"
         Mock Get-HostsFilePath {$hostsFilePath}
