@@ -48,11 +48,11 @@ function Get-TargetResource
             $ensureResult = "Present"
 
             [PSObject[]] $Bindings
-            $Bindings = (get-itemProperty -path IIS:\Sites\$Name -Name Bindings).collection
+            $Bindings = (Get-ItemProperty -path IIS:\Sites\$Name -Name Bindings).collection
 
             $CimBindings = foreach ($binding in $bindings)
             {
-                $BindingObject = get-WebBindingObject -BindingInfo $binding
+                $BindingObject = Get-WebBindingObject -Binding $binding
                 New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;IPAddress=$BindingObject.IPaddress;HostName=$BindingObject.Hostname;CertificateThumbprint=$BindingObject.CertificateThumbprint;CertificateStoreName=$BindingObject.CertificateStoreName} -ClientOnly
             }
 
@@ -624,13 +624,11 @@ function ValidateWebsiteBindings
         $BindingInfo
     )
 
-
     $Valid = $true
 
     foreach($binding in $BindingInfo)
     {
         # First ensure that desired binding information is valid ie. No duplicate IPAddres, Port, Host name combinations.
-
         if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
         {
             ThrowTerminatingError `
@@ -821,13 +819,13 @@ function compareWebsiteBindings
     #check to see if actual settings have been passed in. If not get them from website
     if($ActualBindings -eq $null)
     {
-        $ActualBindings = Get-Website | where {$_.Name -eq $Name} | Get-WebBinding
+        $ActualBindings = (Get-ItemProperty -path "IIS:\Sites\$Name" -Name Bindings).collection
 
         #Format Binding information: Split BindingInfo into individual Properties (IPAddress:Port:HostName)
         $ActualBindingObjects = @()
         foreach ($ActualBinding in $ActualBindings)
         {
-            $ActualBindingObjects += get-WebBindingObject -BindingInfo $ActualBinding
+            $ActualBindingObjects += Get-WebBindingObject -Binding $ActualBinding
         }
     }
 
@@ -973,10 +971,11 @@ function UpdateBindings
             if ($SslSubject -ne $null -and $SslCertPath -ne $null)
             {
                 $theCert = Get-ChildItem -path $SslCertPath | Where-Object {$_.Subject -eq $SslSubject }
-                $CertificateThumbprint = $theCert.Thumbprint
 
-                $NewWebbinding = get-WebBinding -name $Name -Port $Port
-                $newwebbinding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
+                Set-BindingCertificate `
+                    -Binding (Get-WebBinding -name $Name -Port $Port) `
+                    -CertificateThumbprint ($theCert.Thumbprint) `
+                    -CertificateStoreName $CertificateStoreName
             }
         }
         catch
@@ -991,32 +990,68 @@ function UpdateBindings
 
 }
 
-function get-WebBindingObject
+function Set-BindingCertificate
 {
     Param
     (
-        $BindingInfo
+        [parameter(Mandatory=$true)]
+        [System.Object]$Binding,
+
+        [parameter(Mandatory=$true)]
+        [System.String]$CertificateThumbprint,
+
+        [parameter(Mandatory=$true)]
+        [System.String]$CertificateStoreName
+    )
+    $Binding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
+}
+
+function Get-WebBindingObject
+{
+    Param
+    (
+        [parameter(Mandatory=$true)]
+        [System.Object]$Binding
     )
 
-    #First split properties by ']:'. This will get IPv6 address split from port and host name
-    $Split = $BindingInfo.BindingInformation.split("[]")
-    if($Split.count -gt 1)
+    $bindingProperties = @{Protocol = $Binding.protocol}
+
+    switch -wildcard ($Binding.protocol)
     {
-        $IPAddress = $Split.item(1)
-        $Port = $split.item(2).split(":").item(1)
-        $HostName = $split.item(2).split(":").item(2)
-    }
-    else
-    {
-        $SplitProps = $BindingInfo.BindingInformation.split(":")
-        $IPAddress = $SplitProps.item(0)
-        $Port = $SplitProps.item(1)
-        $HostName = $SplitProps.item(2)
+        "http*"
+        {
+            $Matches = $null
+            if ($Binding.BindingInformation -match "^\[?(?<IPAddress>[\*\w\d\.:]+)\]?:(?<Port>[\*\d]+):(?<HostName>.*)$")
+            {
+                $bindingProperties["IPAddress"] = $Matches["IPAddress"]
+                $bindingProperties["Port"] = $Matches["Port"]
+                $bindingProperties["HostName"] = $Matches["HostName"]
+            }
+            else { throw "BindingInformation format is invalid for protocol ""$($Binding.protocol)"" {$($Binding.BindingInformation)}" }
+        }
+        "https"
+        {
+            $bindingProperties["CertificateThumbprint"] = $Binding.CertificateHash
+            $bindingProperties["CertificateStoreName"] = $Binding.CertificateStoreName
+        }
+        "net.tcp"
+        {
+            $Matches = $null
+            if ($Binding.BindingInformation -match "^(?<Port>[\*\d]+):(?<HostName>.*)$")
+            {
+                $bindingProperties["Port"] = $Matches["Port"]
+                $bindingProperties["HostName"] = $Matches["HostName"]
+            }
+            else { throw "BindingInformation format is invalid for protocol ""$($Binding.protocol)"" {$($Binding.BindingInformation)}" }
+        }
+        "net.pipe"
+        {
+            $bindingProperties["HostName"] = $Binding.BindingInformation
+        }
+        default { throw "Invalid protocol ""$($Binding.protocol)""" }
     }
 
-    $WebBindingObject = New-Object PSObject -Property @{Protocol = $BindingInfo.protocol;IPAddress = $IPAddress;Port = $Port;HostName = $HostName;CertificateThumbprint = $BindingInfo.CertificateHash;CertificateStoreName = $BindingInfo.CertificateStoreName}
-
-    return $WebBindingObject
+    return (New-Object PSObject -Property $bindingProperties)
 }
 
 function Get-HostsFilePath
@@ -1036,7 +1071,7 @@ function ThrowTerminatingError
 
     $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
     $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $ErrorId, $ErrorCategory, $null
-    $PSCmdlet.ThrowTerminatingError($errorRecord);
+    throw $errorRecord
 }
 
 #endregion
