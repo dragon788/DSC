@@ -39,5 +39,6 @@ class SEEK_cWebsite : OMI_BaseResource
   [write, EmbeddedInstance("SEEK_cWebAuthenticationInformation"), Description("Hashtable containing authentication information (Anonymous, Basic, Digest, Windows)")] string AuthenticationInfo;
   [write, EmbeddedInstance("SEEK_cHostEntryFileInformation"), Description("Hashtable containing binding information (HostEntryName, HostIpAddress)")] string HostFileInfo[];
   [write] string ApplicationPool;
+  [write] string SslFlags;
   [read] string Id;
 };
