@@ -47,6 +47,8 @@ function Get-TargetResource
         {
             $ensureResult = "Present"
 
+            $SslFlags = Get-SslFlags -Location $Name
+
             [PSObject[]] $Bindings
             $Bindings = (Get-ItemProperty -path IIS:\Sites\$Name -Name Bindings).collection
 
@@ -70,18 +72,19 @@ function Get-TargetResource
 
         # Add all Website properties to the hash table
         $getTargetResourceResult = @{
-                                        Name = $Name;
-                                        Ensure = $ensureResult;
-                                        PhysicalPath = $Website.physicalPath;
-                                        State = $Website.state;
-                                        ID = $Website.id;
-                                        ApplicationPool = $Website.applicationPool;
-                                        BindingInfo = $CimBindings;
-                                        AuthenticationInfo = $CimAuthentication;
+                                        Name = $Name
+                                        Ensure = $ensureResult
+                                        PhysicalPath = $Website.physicalPath
+                                        State = $Website.state
+                                        ID = $Website.id
+                                        SslFlags = $SslFlags
+                                        ApplicationPool = $Website.applicationPool
+                                        BindingInfo = $CimBindings
+                                        AuthenticationInfo = $CimAuthentication
                                         HostFileInfo = $null
                                     }
 
-        return $getTargetResourceResult;
+        return $getTargetResourceResult
 }
 
 
@@ -107,6 +110,9 @@ function Set-TargetResource
 
         [string]$ApplicationPool,
 
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]$BindingInfo,
 
         [Microsoft.Management.Infrastructure.CimInstance[]]$HostFileInfo,
@@ -122,6 +128,10 @@ function Set-TargetResource
         $Result = $psboundparameters.Remove("Ensure");
         #Remove State parameter form website. Will start the website after configuration is complete
         $Result = $psboundparameters.Remove("State");
+
+        #Remove SslFlags parameter form website.
+        #SslFlags will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("SslFlags");
 
         #Remove bindings from parameters if they exist
         #Bindings will be added to site using separate cmdlet
@@ -197,6 +207,8 @@ function Set-TargetResource
 
                 Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
             }
+
+            Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
 
             #Update State if required
             if($website.state -ne $State -and $State -ne "")
@@ -288,6 +300,8 @@ function Set-TargetResource
                 }
                 $Website = New-Website @psboundparameters
                 $Result = Stop-Website $Website.name -ErrorAction Stop
+
+                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
 
                 #Clear default bindings if new bindings defined and are different
                 if($BindingInfo -ne $null)
@@ -388,6 +402,9 @@ function Test-TargetResource
 
         [string]$ApplicationPool,
 
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]$BindingInfo,
 
         [Microsoft.Management.Infrastructure.CimInstance[]]$HostFileInfo,
@@ -440,6 +457,13 @@ function Test-TargetResource
             {
                 $DesiredConfigurationMatch = $false
                 Write-Verbose("Application Pool for Website $Name does not match the desired state.");
+                break
+            }
+
+            if((Get-SslFlags -Location $Name) -ne $SslFlags)
+            {
+                $DesiredConfigurationMatch = $false
+                Write-Verbose("SSL Flags for Website $Name does not match the desired state.");
                 break
             }
 
@@ -1072,6 +1096,18 @@ function ThrowTerminatingError
     $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
     $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $ErrorId, $ErrorCategory, $null
     throw $errorRecord
+}
+
+function Get-SslFlags
+{
+    param
+    (
+        [System.String]$Location
+    )
+
+    $sslFlags = Get-WebConfiguration -PSPath IIS:\Sites -Location $Location -Filter 'system.webserver/security/access' | % { $_.sslFlags }
+    $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
+    return $sslFlags
 }
 
 #endregion

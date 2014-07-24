@@ -5,6 +5,7 @@ Invoke-Expression $code
 Mock Get-Website {$null}
 Mock Get-ItemProperty {return $null}
 Mock Get-WebConfigurationProperty {return $null}
+Mock Get-WebConfiguration {$null}
 
 $MockWebsite = New-Object PSObject -Property @{
     state = "Started"
@@ -50,6 +51,8 @@ Describe "Get-TargetResource" {
             -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
         Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpsBinding)}} `
             -ParameterFilter {$Name -eq "Bindings"}
+        Mock Get-WebConfiguration {New-Object PSObject -Property @{SslFlags = "Ssl"}} `
+            -ParameterFilter {$Filter -eq "system.webserver/security/access"}
 
         It "returns the web site state as a hashtable" {
             $WebSite = Get-TargetResource -Name "MySite"
@@ -58,6 +61,7 @@ Describe "Get-TargetResource" {
             $WebSite.PhysicalPath | Should Be "C:\inetpub\wwwroot\mysite"
             $WebSite.State | Should Be "Started"
             $WebSite.ID | Should Be "9999"
+            $WebSite.SslFlags | Should Be "Ssl"
             $WebSite.ApplicationPool | Should Be "MyAppPool"
             $WebSite.BindingInfo.Port | Should Be "443"
             $WebSite.BindingInfo.Protocol | Should Be "https"
@@ -81,6 +85,7 @@ Describe "Get-TargetResource" {
             $WebSite.PhysicalPath | Should Be $null
             $WebSite.State | Should Be $null
             $WebSite.ID | Should Be $null
+            $WebSite.SslFlags | Should Be $null
             $WebSite.ApplicationPool | Should Be $null
             $WebSite.BindingInfo | Should Be $null
             $WebSite.AuthenticationInfo | Should Be $null
@@ -110,6 +115,8 @@ Describe "Test-TargetResource" {
     Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
         -ParameterFilter {$Filter -ne $null -and $Filter.EndsWith("WindowsAuthentication")}
     Mock Get-ItemProperty {"C:\foo"} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "physicalPath"}
+    Mock Get-WebConfiguration {New-Object PSObject -Property @{SslFlags = ""}} `
+            -ParameterFilter {$Filter -eq "system.webserver/security/access"}
 
     $HttpBindingInfo = New-CimInstance -ClassName SEEK_cWebBindingInformation `
         -Namespace root/microsoft/Windows/DesiredStateConfiguration `
@@ -143,11 +150,15 @@ Describe "Test-TargetResource" {
         }
 
         It "returns false if the state is different" {
-            Test-TargetResource -Name "MySite" -State "Stopped" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo | Should Be $false
+            Test-TargetResource -Name "MySite" -State "Stopped" -PhysicalPath "C:\foo" -ApplicationPool "D" -AuthenticationInfo $AuthenticationInfo | Should Be $false
         }
 
         It "returns false if the application pool is different" {
             Test-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "OtherAppPool" -AuthenticationInfo $AuthenticationInfo | Should Be $false
+        }
+
+        It "returns false if the ssl flags are different" {
+            Test-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -SslFlags "Ssl" | Should Be $false
         }
 
         It "returns true if the existing site has more bindings" {
@@ -255,6 +266,13 @@ Describe "Set-TargetResource" {
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
         }
+
+        It "sets the ssl flags" {
+            Mock Set-WebConfiguration -Verifiable `
+                -ParameterFilter {$PSPath -eq "IIS:\Sites" -and $Location -eq "MySite" -and $Filter -eq "system.webserver/security/access" -and $Value -eq ""}
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
+            Assert-VerifiableMocks
+        }
     }
 
     Context "when web site is present" {
@@ -313,6 +331,20 @@ Describe "Set-TargetResource" {
             $AuthenticationInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly `
                 -Property @{Anonymous = $false; Basic = $true; Digest = $true; Windows = $true}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo
+            Assert-VerifiableMocks
+        }
+
+        It "updates the ssl settings on the site if ssl flags are specified" {
+            Mock Set-WebConfiguration -Verifiable `
+                -ParameterFilter {$PSPath -eq "IIS:\Sites" -and $Location -eq "MySite" -and $Filter -eq "system.webserver/security/access" -and $Value -eq "Ssl"}
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $bindingInfo -SslFlags "Ssl"
+            Assert-VerifiableMocks
+        }
+
+        It "removes the ssl settings on the site if sl flags are absent" {
+            Mock Set-WebConfiguration -Verifiable `
+                -ParameterFilter {$PSPath -eq "IIS:\Sites" -and $Location -eq "MySite" -and $Filter -eq "system.webserver/security/access" -and $Value -eq ""}
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $bindingInfo
             Assert-VerifiableMocks
         }
     }
