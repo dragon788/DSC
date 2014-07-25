@@ -47,12 +47,14 @@ function Get-TargetResource
         {
             $ensureResult = "Present"
 
+            $SslFlags = Get-SslFlags -Location $Name
+
             [PSObject[]] $Bindings
-            $Bindings = (get-itemProperty -path IIS:\Sites\$Name -Name Bindings).collection
+            $Bindings = (Get-ItemProperty -path IIS:\Sites\$Name -Name Bindings).collection
 
             $CimBindings = foreach ($binding in $bindings)
             {
-                $BindingObject = get-WebBindingObject -BindingInfo $binding
+                $BindingObject = Get-WebBindingObject -Binding $binding
                 New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;IPAddress=$BindingObject.IPaddress;HostName=$BindingObject.Hostname;CertificateThumbprint=$BindingObject.CertificateThumbprint;CertificateStoreName=$BindingObject.CertificateStoreName} -ClientOnly
             }
 
@@ -70,18 +72,19 @@ function Get-TargetResource
 
         # Add all Website properties to the hash table
         $getTargetResourceResult = @{
-                                        Name = $Name;
-                                        Ensure = $ensureResult;
-                                        PhysicalPath = $Website.physicalPath;
-                                        State = $Website.state;
-                                        ID = $Website.id;
-                                        ApplicationPool = $Website.applicationPool;
-                                        BindingInfo = $CimBindings;
-                                        AuthenticationInfo = $CimAuthentication;
+                                        Name = $Name
+                                        Ensure = $ensureResult
+                                        PhysicalPath = $Website.physicalPath
+                                        State = $Website.state
+                                        ID = $Website.id
+                                        SslFlags = $SslFlags
+                                        ApplicationPool = $Website.applicationPool
+                                        BindingInfo = $CimBindings
+                                        AuthenticationInfo = $CimAuthentication
                                         HostFileInfo = $null
                                     }
 
-        return $getTargetResourceResult;
+        return $getTargetResourceResult
 }
 
 
@@ -107,6 +110,9 @@ function Set-TargetResource
 
         [string]$ApplicationPool,
 
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]$BindingInfo,
 
         [Microsoft.Management.Infrastructure.CimInstance[]]$HostFileInfo,
@@ -122,6 +128,10 @@ function Set-TargetResource
         $Result = $psboundparameters.Remove("Ensure");
         #Remove State parameter form website. Will start the website after configuration is complete
         $Result = $psboundparameters.Remove("State");
+
+        #Remove SslFlags parameter form website.
+        #SslFlags will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("SslFlags");
 
         #Remove bindings from parameters if they exist
         #Bindings will be added to site using separate cmdlet
@@ -197,6 +207,8 @@ function Set-TargetResource
 
                 Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
             }
+
+            Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
 
             #Update State if required
             if($website.state -ne $State -and $State -ne "")
@@ -288,6 +300,8 @@ function Set-TargetResource
                 }
                 $Website = New-Website @psboundparameters
                 $Result = Stop-Website $Website.name -ErrorAction Stop
+
+                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
 
                 #Clear default bindings if new bindings defined and are different
                 if($BindingInfo -ne $null)
@@ -388,6 +402,9 @@ function Test-TargetResource
 
         [string]$ApplicationPool,
 
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]$BindingInfo,
 
         [Microsoft.Management.Infrastructure.CimInstance[]]$HostFileInfo,
@@ -440,6 +457,13 @@ function Test-TargetResource
             {
                 $DesiredConfigurationMatch = $false
                 Write-Verbose("Application Pool for Website $Name does not match the desired state.");
+                break
+            }
+
+            if((Get-SslFlags -Location $Name) -ne $SslFlags)
+            {
+                $DesiredConfigurationMatch = $false
+                Write-Verbose("SSL Flags for Website $Name does not match the desired state.");
                 break
             }
 
@@ -624,13 +648,11 @@ function ValidateWebsiteBindings
         $BindingInfo
     )
 
-
     $Valid = $true
 
     foreach($binding in $BindingInfo)
     {
         # First ensure that desired binding information is valid ie. No duplicate IPAddres, Port, Host name combinations.
-
         if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
         {
             ThrowTerminatingError `
@@ -821,13 +843,13 @@ function compareWebsiteBindings
     #check to see if actual settings have been passed in. If not get them from website
     if($ActualBindings -eq $null)
     {
-        $ActualBindings = Get-Website | where {$_.Name -eq $Name} | Get-WebBinding
+        $ActualBindings = (Get-ItemProperty -path "IIS:\Sites\$Name" -Name Bindings).collection
 
         #Format Binding information: Split BindingInfo into individual Properties (IPAddress:Port:HostName)
         $ActualBindingObjects = @()
         foreach ($ActualBinding in $ActualBindings)
         {
-            $ActualBindingObjects += get-WebBindingObject -BindingInfo $ActualBinding
+            $ActualBindingObjects += Get-WebBindingObject -Binding $ActualBinding
         }
     }
 
@@ -924,9 +946,7 @@ function UpdateBindings
     $SiteEnabledProtocols = $BindingInfo  | Select-Object -ExpandProperty Protocol -Unique
     Set-ItemProperty IIS:\Sites\$Name -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',') -ErrorAction Stop
 
-    #Need to clear the bindings before we can create new ones
-    Clear-ItemProperty IIS:\Sites\$Name -Name bindings -ErrorAction Stop
-
+    $bindingParams = @()
     foreach($binding in $BindingInfo)
     {
         $Protocol = $Binding.CimInstanceProperties["Protocol"].Value
@@ -935,10 +955,7 @@ function UpdateBindings
         if($IPAddress -eq $null){$IPAddress = '*'} # Default to any/all IP Addresses
         $Port = $Binding.CimInstanceProperties["Port"].Value
         $HostName = $Binding.CimInstanceProperties["HostName"].Value
-        $CertificateThumbprint = $Binding.CimInstanceProperties["CertificateThumbprint"].Value
-        $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
-        $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
-        $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
+
 
         if ($Protocol -eq 'net.pipe')
         {
@@ -953,34 +970,45 @@ function UpdateBindings
             $bindingInformation = "$($IPAddress):$($Port):$HostName"
         }
 
-        $bindingParams = @{Protocol = $Protocol; BindingInformation = $bindingInformation}
+        $bindingParams += @{Protocol = $Protocol; BindingInformation = $bindingInformation}
+    }
 
-        try
-        {
-            New-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams -ErrorAction Stop
-        }
-        Catch
-        {
-            ThrowTerminatingError `
-                -ErrorId "WebsiteBindingUpdateFailure" `
-                -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
-                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
-                -Exception ($_.exception)
-        }
+    try
+    {
+        Set-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams -ErrorAction Stop
+    }
+    Catch
+    {
+        ThrowTerminatingError `
+            -ErrorId "WebsiteBindingUpdateFailure" `
+            -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
+            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+            -Exception ($_.exception)
+    }
+
+    $HttpsBindingInfo = $BindingInfo | ? { $_.CimInstanceProperties["Protocol"].Value -eq "https" }
+    foreach($binding in $HttpsBindingInfo)
+    {
+        $Port = $Binding.CimInstanceProperties["Port"].Value
+        $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
+        $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
+        $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
 
         try
         {
             if ($SslSubject -ne $null -and $SslCertPath -ne $null)
             {
                 $theCert = Get-ChildItem -path $SslCertPath | Where-Object {$_.Subject -eq $SslSubject }
-                $CertificateThumbprint = $theCert.Thumbprint
 
-                $NewWebbinding = get-WebBinding -name $Name -Port $Port
-                $newwebbinding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
+                Set-BindingCertificate `
+                    -Binding (Get-WebBinding -name $Name -Port $Port) `
+                    -CertificateThumbprint ($theCert.Thumbprint) `
+                    -CertificateStoreName $CertificateStoreName
             }
         }
         catch
         {
+            Write-Error $_
             ThrowTerminatingError `
                 -ErrorId "WebBindingCertifcateError" `
                 -ErrorMessage  ($($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint}) `
@@ -991,32 +1019,68 @@ function UpdateBindings
 
 }
 
-function get-WebBindingObject
+function Set-BindingCertificate
 {
     Param
     (
-        $BindingInfo
+        [parameter(Mandatory=$true)]
+        [System.Object]$Binding,
+
+        [parameter(Mandatory=$true)]
+        [System.String]$CertificateThumbprint,
+
+        [parameter(Mandatory=$true)]
+        [System.String]$CertificateStoreName
+    )
+    $Binding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
+}
+
+function Get-WebBindingObject
+{
+    Param
+    (
+        [parameter(Mandatory=$true)]
+        [System.Object]$Binding
     )
 
-    #First split properties by ']:'. This will get IPv6 address split from port and host name
-    $Split = $BindingInfo.BindingInformation.split("[]")
-    if($Split.count -gt 1)
+    $bindingProperties = @{Protocol = $Binding.protocol}
+
+    switch -wildcard ($Binding.protocol)
     {
-        $IPAddress = $Split.item(1)
-        $Port = $split.item(2).split(":").item(1)
-        $HostName = $split.item(2).split(":").item(2)
-    }
-    else
-    {
-        $SplitProps = $BindingInfo.BindingInformation.split(":")
-        $IPAddress = $SplitProps.item(0)
-        $Port = $SplitProps.item(1)
-        $HostName = $SplitProps.item(2)
+        "http*"
+        {
+            $Matches = $null
+            if ($Binding.BindingInformation -match "^\[?(?<IPAddress>[\*\w\d\.:]+)\]?:(?<Port>[\*\d]+):(?<HostName>.*)$")
+            {
+                $bindingProperties["IPAddress"] = $Matches["IPAddress"]
+                $bindingProperties["Port"] = $Matches["Port"]
+                $bindingProperties["HostName"] = $Matches["HostName"]
+            }
+            else { throw "BindingInformation format is invalid for protocol ""$($Binding.protocol)"" {$($Binding.BindingInformation)}" }
+        }
+        "https"
+        {
+            $bindingProperties["CertificateThumbprint"] = $Binding.CertificateHash
+            $bindingProperties["CertificateStoreName"] = $Binding.CertificateStoreName
+        }
+        "net.tcp"
+        {
+            $Matches = $null
+            if ($Binding.BindingInformation -match "^(?<Port>[\*\d]+):(?<HostName>.*)$")
+            {
+                $bindingProperties["Port"] = $Matches["Port"]
+                $bindingProperties["HostName"] = $Matches["HostName"]
+            }
+            else { throw "BindingInformation format is invalid for protocol ""$($Binding.protocol)"" {$($Binding.BindingInformation)}" }
+        }
+        "net.pipe"
+        {
+            $bindingProperties["HostName"] = $Binding.BindingInformation
+        }
+        default { throw "Invalid protocol ""$($Binding.protocol)""" }
     }
 
-    $WebBindingObject = New-Object PSObject -Property @{Protocol = $BindingInfo.protocol;IPAddress = $IPAddress;Port = $Port;HostName = $HostName;CertificateThumbprint = $BindingInfo.CertificateHash;CertificateStoreName = $BindingInfo.CertificateStoreName}
-
-    return $WebBindingObject
+    return (New-Object PSObject -Property $bindingProperties)
 }
 
 function Get-HostsFilePath
@@ -1036,7 +1100,19 @@ function ThrowTerminatingError
 
     $exception = New-Object System.InvalidOperationException $ErrorMessage, $Exception
     $errorRecord = New-Object System.Management.Automation.ErrorRecord $exception, $ErrorId, $ErrorCategory, $null
-    $PSCmdlet.ThrowTerminatingError($errorRecord);
+    throw $errorRecord
+}
+
+function Get-SslFlags
+{
+    param
+    (
+        [System.String]$Location
+    )
+
+    $sslFlags = Get-WebConfiguration -PSPath IIS:\Sites -Location $Location -Filter 'system.webserver/security/access' | % { $_.sslFlags }
+    $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
+    return $sslFlags
 }
 
 #endregion
