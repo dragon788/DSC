@@ -946,9 +946,7 @@ function UpdateBindings
     $SiteEnabledProtocols = $BindingInfo  | Select-Object -ExpandProperty Protocol -Unique
     Set-ItemProperty IIS:\Sites\$Name -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',') -ErrorAction Stop
 
-    #Need to clear the bindings before we can create new ones
-    Clear-ItemProperty IIS:\Sites\$Name -Name bindings -ErrorAction Stop
-
+    $bindingParams = @()
     foreach($binding in $BindingInfo)
     {
         $Protocol = $Binding.CimInstanceProperties["Protocol"].Value
@@ -957,10 +955,7 @@ function UpdateBindings
         if($IPAddress -eq $null){$IPAddress = '*'} # Default to any/all IP Addresses
         $Port = $Binding.CimInstanceProperties["Port"].Value
         $HostName = $Binding.CimInstanceProperties["HostName"].Value
-        $CertificateThumbprint = $Binding.CimInstanceProperties["CertificateThumbprint"].Value
-        $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
-        $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
-        $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
+
 
         if ($Protocol -eq 'net.pipe')
         {
@@ -975,20 +970,29 @@ function UpdateBindings
             $bindingInformation = "$($IPAddress):$($Port):$HostName"
         }
 
-        $bindingParams = @{Protocol = $Protocol; BindingInformation = $bindingInformation}
+        $bindingParams += @{Protocol = $Protocol; BindingInformation = $bindingInformation}
+    }
 
-        try
-        {
-            New-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams -ErrorAction Stop
-        }
-        Catch
-        {
-            ThrowTerminatingError `
-                -ErrorId "WebsiteBindingUpdateFailure" `
-                -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
-                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
-                -Exception ($_.exception)
-        }
+    try
+    {
+        Set-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams -ErrorAction Stop
+    }
+    Catch
+    {
+        ThrowTerminatingError `
+            -ErrorId "WebsiteBindingUpdateFailure" `
+            -ErrorMessage  ($($LocalizedData.WebsiteBindingUpdateFailureError) -f ${HostName}, ${Name}) `
+            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+            -Exception ($_.exception)
+    }
+
+    $HttpsBindingInfo = $BindingInfo | ? { $_.CimInstanceProperties["Protocol"].Value -eq "https" }
+    foreach($binding in $HttpsBindingInfo)
+    {
+        $Port = $Binding.CimInstanceProperties["Port"].Value
+        $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
+        $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
+        $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
 
         try
         {
@@ -1004,6 +1008,7 @@ function UpdateBindings
         }
         catch
         {
+            Write-Error $_
             ThrowTerminatingError `
                 -ErrorId "WebBindingCertifcateError" `
                 -ErrorMessage  ($($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint}) `

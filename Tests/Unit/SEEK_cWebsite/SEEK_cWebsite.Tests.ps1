@@ -198,7 +198,6 @@ Describe "Set-TargetResource" {
     Mock Stop-Website
     Mock Start-Website
     Mock Remove-Website
-    Mock Clear-ItemProperty {}
     Mock New-ItemProperty {}
     Mock Set-WebConfigurationProperty {}
     Mock Set-WebConfiguration {}
@@ -241,9 +240,12 @@ Describe "Set-TargetResource" {
         }
 
         It "creates new bindings" {
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "http" -and $Value.BindingInformation -eq "192.168.0.1:80:www.mysite.com"}
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "net.pipe" -and $Value.BindingInformation -eq "my.service"}
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "net.tcp" -and $Value.BindingInformation -eq "5555:my.service"}
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and `
+                $Value[0].Protocol -eq "net.pipe" -and $Value[0].BindingInformation -eq "my.service" -and `
+                $Value[1].Protocol -eq "net.tcp" -and $Value[1].BindingInformation -eq "5555:my.service" -and `
+                $Value[2].Protocol -eq "http" -and $Value[2].BindingInformation -eq "192.168.0.1:80:www.mysite.com"
+            }
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
         }
@@ -293,12 +295,12 @@ Describe "Set-TargetResource" {
         }
 
         It "replaces the bindings" {
-            Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpBinding)}} `
-                -ParameterFilter {$Name -eq "Bindings"}
-            Mock Clear-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "http" -and $Value.BindingInformation -eq "192.168.0.1:80:www.mysite.com"}
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "net.pipe" -and $Value.BindingInformation -eq "my.service"}
-            Mock New-ItemProperty -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.Protocol -eq "net.tcp" -and $Value.BindingInformation -eq "5555:my.service"}
+            Mock Set-ItemProperty -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and `
+                $Value[0].Protocol -eq "net.pipe" -and $Value[0].BindingInformation -eq "my.service" -and `
+                $Value[1].Protocol -eq "net.tcp" -and $Value[1].BindingInformation -eq "5555:my.service" -and `
+                $Value[2].Protocol -eq "http" -and $Value[2].BindingInformation -eq "192.168.0.1:80:www.mysite.com"
+            }
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
         }
