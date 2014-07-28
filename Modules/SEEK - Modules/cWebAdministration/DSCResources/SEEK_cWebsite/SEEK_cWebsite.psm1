@@ -1050,7 +1050,7 @@ function Get-WebBindingObject
         "http*"
         {
             $Matches = $null
-            if ($Binding.BindingInformation -match "^\[?(?<IPAddress>[\*\w\d\.:]+)\]?:(?<Port>[\*\d]+):(?<HostName>.*)$")
+            if ($Binding.BindingInformation -match "^\[?(?<IPAddress>[\*\w\d\.:]*)\]?:(?<Port>[\*\d]+):(?<HostName>.*)$")
             {
                 $bindingProperties["IPAddress"] = $Matches["IPAddress"]
                 $bindingProperties["Port"] = $Matches["Port"]
