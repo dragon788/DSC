@@ -22,6 +22,7 @@ function Get-TargetResource
         [String]$NodeName
     )
 
+    Write-Warning "SEEK_cIPAddress resource is obsolete, please use SEEK_cStaticIpAddress"
 
     $returnValue = @{
     }
@@ -47,6 +48,7 @@ function Set-TargetResource
         [String]$NodeName
     )
 
+    Write-Warning "SEEK_cIPAddress resource is obsolete, please use SEEK_cStaticIpAddress"
 
     ValidateProperties @PSBoundParameters
 }
@@ -67,6 +69,8 @@ function Test-TargetResource
         [ValidateNotNullOrEmpty()]
         [String]$NodeName
     )
+
+    Write-Warning "SEEK_cIPAddress resource is obsolete, please use SEEK_cStaticIpAddress"
 
     $result = ValidateProperties @PSBoundParameters
 
