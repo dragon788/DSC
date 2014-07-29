@@ -8,22 +8,18 @@ function Get-TargetResource
     (
         [parameter(Mandatory = $true)]
         [System.String]
-        $Name,
-
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $ApplicationName
+        $Name
     )
 
     $AppPool = Get-AppPool($Name)
     if($AppPool -eq $null)
     {
-        return @{Name = $Name; ApplicationName = $ApplicationName; Ensure = "Absent"; State = "Stopped"}
+        return @{Name = $Name; Ensure = "Absent"; State = "Stopped"}
     }
 
     $returnValue = @{
         Name   = $Name
-        ApplicationName = $ApplicationName
+        ApplicationName = $null
         Ensure = "Present"
         State  = $AppPool.State
         managedRuntimeVersion = $AppPool.managedRuntimeVersion
@@ -49,9 +45,9 @@ function Set-TargetResource
         [System.String]
         $Name,
 
-        [parameter(Mandatory = $true)]
+        # Obsolete: will be removed
         [System.String]
-        $ApplicationName,
+        $ApplicationName = $null,
 
         [ValidateSet("Present","Absent")]
         [System.String]
@@ -126,9 +122,9 @@ function Test-TargetResource
         [System.String]
         $Name,
 
-        [parameter(Mandatory = $true)]
+        # Obsolete: will be removed
         [System.String]
-        $ApplicationName,
+        $ApplicationName = $null,
 
         [ValidateSet("Present","Absent")]
         [System.String]
@@ -162,7 +158,7 @@ function Test-TargetResource
         [System.String]
         $Password
     )
-    $WebAppPool = Get-TargetResource -Name $Name -ApplicationName $ApplicationName
+    $WebAppPool = Get-TargetResource -Name $Name
 
     if($Ensure -eq "Present")
     {

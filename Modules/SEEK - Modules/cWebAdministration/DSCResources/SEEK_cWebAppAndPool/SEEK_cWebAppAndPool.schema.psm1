@@ -19,7 +19,6 @@
     cWebAppPool AppPool
     {
         Name = $AppPoolName
-        ApplicationName = $Name
         UserName = $AppPoolCredentials.Username
         Password = $AppPoolCredentials.Password
         ManagedRuntimeVersion = $AppPoolManagedRuntimeVersion
