@@ -22,6 +22,7 @@ WebsiteBindingConflictOnStartError = Website "{0}" could not be started due to b
 # It gives the Website info of the requested role/feature on the target machine.
 function Get-TargetResource
 {
+    [CmdletBinding()]
     param
     (
         [Parameter(Mandatory)]
@@ -91,7 +92,7 @@ function Get-TargetResource
 # The Set-TargetResource cmdlet is used to create, delete or configuure a website on the target machine.
 function Set-TargetResource
 {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding()]
     param
     (
         [ValidateSet("Present", "Absent")]
@@ -163,7 +164,7 @@ function Set-TargetResource
             if(ValidateWebsitePath -Name $Name -PhysicalPath $PhysicalPath)
             {
                 $UpdateNotRequired = $false
-                Set-ItemProperty "IIS:\Sites\$Name" -Name physicalPath -Value $PhysicalPath -ErrorAction Stop
+                Set-ItemProperty "IIS:\Sites\$Name" -Name physicalPath -Value $PhysicalPath
 
                 Write-Verbose("Physical path for website $Name has been updated to $PhysicalPath");
             }
@@ -176,7 +177,7 @@ function Set-TargetResource
                     $UpdateNotRequired = $false
 
                     #Update Bindings
-                    UpdateBindings -Name $Name -BindingInfo $BindingInfo -ErrorAction Stop
+                    UpdateBindings -Name $Name -BindingInfo $BindingInfo
 
                     Write-Verbose("Bindings for website $Name have been updated.");
                 }
@@ -184,7 +185,7 @@ function Set-TargetResource
 
             if (!(Test-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo))
             {
-                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
                 Write-Verbose ("Authentication information for website $Name has been updated.")
             }
 
@@ -203,7 +204,7 @@ function Set-TargetResource
             if(($website.applicationPool -ne $ApplicationPool) -and ($ApplicationPool -ne ""))
             {
                 $UpdateNotRequired = $false
-                Set-ItemProperty IIS:\Sites\$Name -Name applicationPool -Value $ApplicationPool -ErrorAction Stop
+                Set-ItemProperty IIS:\Sites\$Name -Name applicationPool -Value $ApplicationPool
 
                 Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
             }
@@ -316,7 +317,7 @@ function Set-TargetResource
 
                 Write-Verbose ("Begin Authentication information update for website $Name, $AuthenticationInfo")
 
-                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
 
                 #Update host entry if required
                 if ($HostFileInfo -ne $null)
@@ -384,6 +385,7 @@ function Set-TargetResource
 # The Test-TargetResource cmdlet is used to validate if the role or feature is in a state as expected in the instance document.
 function Test-TargetResource
 {
+    [CmdletBinding()]
     param
     (
         [ValidateSet("Present", "Absent")]
@@ -508,6 +510,7 @@ function Test-TargetResource
 
 function ValidateHostFileEntry
 {
+    [CmdletBinding()]
     param
     (
         [parameter()]
@@ -547,6 +550,7 @@ function ValidateHostFileEntry
 
 function UpdateHostFileEntry
 {
+    [CmdletBinding()]
     param
     (
         [parameter()]
@@ -593,6 +597,7 @@ function UpdateHostFileEntry
 # ValidateWebsite is a helper function used to validate the results
 function ValidateWebsite
 {
+    [CmdletBinding()]
     param
     (
         [object] $Website,
@@ -614,6 +619,7 @@ function ValidateWebsite
 # Helper function used to validate website path
 function ValidateWebsitePath
 {
+    [CmdletBinding()]
     param
     (
         [string] $Name,
@@ -637,6 +643,7 @@ function ValidateWebsitePath
 
 function ValidateWebsiteBindings
 {
+    [CmdletBinding()]
     Param
     (
         [parameter()]
@@ -667,6 +674,7 @@ function ValidateWebsiteBindings
 
 function Test-AuthenticationEnabled
 {
+    [CmdletBinding()]
     [OutputType([System.Boolean])]
     Param
     (
@@ -688,6 +696,7 @@ function Test-AuthenticationEnabled
 
 function Set-Authentication
 {
+    [CmdletBinding()]
     Param
     (
         [parameter(Mandatory = $true)]
@@ -708,6 +717,7 @@ function Set-Authentication
 
 function Get-AuthenticationInfo
 {
+    [CmdletBinding()]
     [OutputType([Microsoft.Management.Infrastructure.CimInstance])]
     Param
     (
@@ -726,6 +736,7 @@ function Get-AuthenticationInfo
 
 function Test-AuthenticationInfo
 {
+    [CmdletBinding()]
     [OutputType([System.Boolean])]
     param
     (
@@ -755,6 +766,7 @@ function Test-AuthenticationInfo
 
 function Set-AuthenticationInfo
 {
+    [CmdletBinding()]
     param
     (
         [parameter(Mandatory = $true)]
@@ -781,6 +793,7 @@ function Get-DefaultAuthenticationInfo
 
 function EnsurePortIPHostUnique
 {
+    [CmdletBinding()]
     param
     (
         [parameter()]
@@ -826,6 +839,7 @@ function EnsurePortIPHostUnique
 # Returns true if bindings need to be updated and false if not.
 function compareWebsiteBindings
 {
+    [CmdletBinding()]
     param
     (
         [parameter()]
@@ -930,6 +944,7 @@ function compareWebsiteBindings
 
 function UpdateBindings
 {
+    [CmdletBinding()]
     param
     (
         [parameter(Mandatory=$true)]
@@ -944,7 +959,7 @@ function UpdateBindings
 
     #Enable all protocols specified in bindings
     $SiteEnabledProtocols = $BindingInfo  | Select-Object -ExpandProperty Protocol -Unique
-    Set-ItemProperty IIS:\Sites\$Name -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',') -ErrorAction Stop
+    Set-ItemProperty IIS:\Sites\$Name -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',')
 
     $bindingParams = @()
     foreach($binding in $BindingInfo)
@@ -975,7 +990,7 @@ function UpdateBindings
 
     try
     {
-        Set-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams -ErrorAction Stop
+        Set-ItemProperty IIS:\Sites\$Name -Name bindings -value $bindingParams
     }
     Catch
     {
@@ -1021,6 +1036,7 @@ function UpdateBindings
 
 function Set-BindingCertificate
 {
+    [CmdletBinding()]
     Param
     (
         [parameter(Mandatory=$true)]
@@ -1037,6 +1053,7 @@ function Set-BindingCertificate
 
 function Get-WebBindingObject
 {
+    [CmdletBinding()]
     Param
     (
         [parameter(Mandatory=$true)]
@@ -1090,6 +1107,7 @@ function Get-HostsFilePath
 
 function ThrowTerminatingError
 {
+    [CmdletBinding()]
     param
     (
         [System.String]$ErrorId,
@@ -1105,6 +1123,7 @@ function ThrowTerminatingError
 
 function Get-SslFlags
 {
+    [CmdletBinding()]
     param
     (
         [System.String]$Location
