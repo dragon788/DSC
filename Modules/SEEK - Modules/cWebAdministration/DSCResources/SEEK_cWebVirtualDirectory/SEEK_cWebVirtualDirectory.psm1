@@ -1,3 +1,5 @@
+Import-Module WebAdministration
+
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -19,8 +21,6 @@ function Get-TargetResource
         [System.String]
         $PhysicalPath
     )
-
-    CheckDependencies
 
     $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
 
@@ -68,8 +68,6 @@ function Set-TargetResource
         [System.String]
         $Ensure = "Present"
     )
-
-    CheckDependencies
 
     if ($Ensure -eq "Present")
     {
@@ -120,8 +118,6 @@ function Test-TargetResource
         $Ensure = "Present"
     )
 
-    CheckDependencies
-
     Write-Verbose "Checking the virtual directories for the website."
 
     $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
@@ -147,16 +143,6 @@ function Test-TargetResource
     }
 
     return $false
-}
-
-function CheckDependencies
-{
-    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
-    # Check if WebAdministration module is present for IIS cmdlets
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
-    {
-        Throw "Please ensure that WebAdministration module is installed."
-    }
 }
 
 function GetWebVirtualDirectoryInternal

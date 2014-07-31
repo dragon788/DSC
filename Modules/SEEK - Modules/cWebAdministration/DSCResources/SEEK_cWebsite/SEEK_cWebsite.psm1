@@ -1,3 +1,5 @@
+Import-Module WebAdministration
+
 data LocalizedData
 {
     # culture="en-US"
@@ -31,12 +33,6 @@ function Get-TargetResource
     )
 
         $getTargetResourceResult = $null;
-
-        # Check if WebAdministration module is present for IIS cmdlets
-        if(!(Get-Module -ListAvailable -Name WebAdministration))
-        {
-            Throw "Please ensure that WebAdministration module is installed."
-        }
 
         $Website = Get-Website | where {$_.Name -eq $Name}
 
@@ -146,11 +142,6 @@ function Set-TargetResource
         #Host file settings will be added to site using separate cmdlet
         $Result = $psboundparameters.Remove("HostFileInfo");
 
-        # Check if WebAdministration module is present for IIS cmdlets
-        if(!(Get-Module -ListAvailable -Name WebAdministration))
-        {
-            Throw "Please ensure that WebAdministration module is installed."
-        }
         $website = Get-Website | where {$_.Name -eq $Name}
 
 
@@ -415,12 +406,6 @@ function Test-TargetResource
     )
 
     $DesiredConfigurationMatch = $true;
-
-    # Check if WebAdministration module is present for IIS cmdlets
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
-    {
-        Throw "Please ensure that WebAdministration module is installed."
-    }
 
     $website = Get-Website | where {$_.Name -eq $Name}
     $Stop = $true

@@ -1,3 +1,5 @@
+Import-Module WebAdministration
+
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -10,8 +12,6 @@ function Get-TargetResource
         [parameter(Mandatory = $true)]
         [System.String]$Name
     )
-
-    CheckDependencies
 
     $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
     if ($webApplication -ne $null)
@@ -59,9 +59,6 @@ function Set-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
-
-    CheckDependencies
-
 
     if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
@@ -121,8 +118,6 @@ function Test-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
-
-    CheckDependencies
 
     if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
@@ -295,15 +290,6 @@ function Get-DefaultAuthenticationInfo
     New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
         -ClientOnly `
         -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
-}
-
-function CheckDependencies
-{
-    Write-Verbose "Checking whether WebAdministration module is available."
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
-    {
-        Throw "Please ensure that WebAdministration module is installed."
-    }
 }
 
 Export-ModuleMember -Function *-TargetResource

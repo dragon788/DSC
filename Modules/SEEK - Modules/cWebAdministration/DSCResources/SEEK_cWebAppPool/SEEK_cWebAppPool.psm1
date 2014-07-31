@@ -189,12 +189,6 @@ function Test-TargetResource
 
 function Get-AppPool([string] $Name)
 {
-    #WebAdministration module is required to get for IIS:\AppPools
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
-    {
-        Throw "Please ensure that WebAdministration module is installed."
-    }
-
     return $AppPool = Get-Item -Path "IIS:\AppPools\*" | ? {$_.name -eq $Name}
 }
 
