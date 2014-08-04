@@ -1,0 +1,7 @@
+[ClassVersion("1.0.0"), FriendlyName("cFeatureDelegation")]
+class SEEK_cFeatureDelegation : OMI_BaseResource
+{
+    [Key, Description("Name of feature to delegate")] string Name;
+    [Write, Description("Feature override mode"), ValueMap{"Allow","Deny","Inherit"}, Values{"Allow","Deny","Inherit"}] string OverrideMode;
+    [Write, Description("Whether feature delegate should be present or absent"), ValueMap{"Present","Absent"}, Values{"Present","Absent"}] string Ensure;
+};
