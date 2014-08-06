@@ -7,17 +7,19 @@ function Get-TargetResource
     param
     (
         [parameter(Mandatory = $true)]
-        [System.String]$Name
+        [System.String]$Section
     )
 
-    $configuration = Get-WebConfiguration -Filter "//${Name}" -PSPath "IIS:"
-    if ($configuration -eq $null) { return @{Ensure = "Absent"} }
+    $configuration = Get-WebConfiguration -Filter $Section -PSPath "IIS:"
 
-    return @{
-        Ensure = "Present"
-        Name = $Name
-        OverrideMode = $configuration.OverrideMode
+    if($configuration -ne $null -and $configuration.OverrideMode -eq "Allow") {
+        return @{
+            Ensure = "Present"
+            Section = $Section
+        }
     }
+
+    return @{Ensure = "Absent"}
 }
 
 function Test-TargetResource
@@ -27,26 +29,16 @@ function Test-TargetResource
     (
         [parameter(Mandatory = $true)]
         [System.String]
-        $Name,
-
-        [ValidateSet("Allow","Deny","Inherit")]
-        [System.String]
-        $OverrideMode,
+        $Section,
 
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
     )
 
-    $actualState = Get-TargetResource -Name $Name
+    $actualState = Get-TargetResource -Section $Section
 
-    if ($Ensure -eq "Absent" -and $Ensure -eq $actualState.Ensure) { return $true }
-
-    if ($OverrideMode -eq $actualState.OverrideMode -and
-        $Ensure -eq $actualState.Ensure)
-    {
-        return $true
-    }
+    if ($Ensure -eq $actualState.Ensure) { return $true }
 
     return $false
 }
@@ -58,11 +50,7 @@ function Set-TargetResource
     (
         [parameter(Mandatory = $true)]
         [System.String]
-        $Name,
-
-        [ValidateSet("Allow","Deny","Inherit")]
-        [System.String]
-        $OverrideMode = "Inherit",
+        $Section,
 
         [ValidateSet("Present","Absent")]
         [System.String]
@@ -70,10 +58,13 @@ function Set-TargetResource
     )
 
     if($Ensure -eq "Absent") {
-        $OverrideMode = "Inherit"
+        $overrideMode = "Deny"
+    } 
+    else {
+        $overrideMode = "Allow"
     }
 
-    Set-WebConfiguration -Filter "//${Name}" -PSPath "IIS:" -MetaData "overrideMode" -Value $OverrideMode
+    Set-WebConfiguration -Filter $Section -PSPath "IIS:" -MetaData "overrideMode" -Value $overrideMode
 }
 
 Export-ModuleMember -Function *-TargetResource
