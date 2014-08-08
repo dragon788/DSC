@@ -48,7 +48,7 @@ function Test-TargetResource
         $bindingToFind = $_
         $currentBindings.Bindings | ForEach-Object {
             if(-not $foundBinding) {
-                $foundBinding = equalBindings -One $bindingToFind -Two $_
+                $foundBinding = equalBindings $bindingToFind $_
             }
         }
 
@@ -72,15 +72,18 @@ function Set-TargetResource
         $Bindings = @()
     )
 
-    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $Bindings
+    $newBindings = $Bindings
+    $newBindings += (Get-TargetResource -Site $Site).Bindings
+
+    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $newBindings
 }
 
 function equalBindings {
     [CmdletBinding()]
-    param($One, $Two)
+    param($bindingOne, $bindingTwo)
 
-    $matchingBindingInformation = $One.BindingInformation -eq $Two.BindingInformation
-    $matchingProtocol = $One.Protocol -eq $Two.Protocol
+    $matchingBindingInformation = $bindingOne.BindingInformation -eq $bindingTwo.BindingInformation
+    $matchingProtocol = $bindingOne.Protocol -eq $bindingTwo.Protocol
     return $matchingBindingInformation -and $matchingProtocol
 }
 

@@ -118,18 +118,28 @@ Describe "Test-TargetResource" {
 }
 
 Describe "Set-TargetResource" {
-
     $firstBindingProperty = @{
         BindingInformation = "First Binding Information"
         Protocol = "protocol"
     }
     $firstBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $firstBindingProperty
 
-    Mock Set-ItemProperty {} -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and $Value.BindingInformation -eq "First Binding Information" -and $Value.Protocol -eq "protocol"}
+    $secondBindingProperty = @{
+        BindingInformation = "Second Binding Information"
+        Protocol = "another protocol"
+    }
+    $secondBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $secondBindingProperty
 
-    It "sets the bindings property" {
-        Set-TargetResource -Bindings $firstBinding -Site "MySite"
-        Assert-VerifiableMocks
+    Mock Get-ItemProperty {@{collection = @($firstBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
+
+    Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+        $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+        $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
+        $Value.BindingInformation -contains "Second Binding Information" -and $Value.Protocol -contains "another protocol"
     }
 
+    It "preserves existing bindings while adding new ones" {
+        Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
+        Assert-VerifiableMocks
+    }
 }
