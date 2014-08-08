@@ -88,6 +88,16 @@ Configuration TestConfiguration
             PhysicalPath = "C:\Temp\TestVirtualDir"
             DependsOn = @("[cWebApplication]TestApplication")
         }
+
+        cBindings TestNewBindings
+        {
+            Ensure = "Present"
+            Bindings = @(SEEK_cBinding {
+                BindingInformation = "localhost/server"
+                Protocol = "net.msmq"
+            })
+            Site = "Test"
+        }
     }
 }
 
@@ -119,6 +129,11 @@ Describe "WebSite DSC Resource" {
 
         It "creates a new web application virtual directory " {
             Get-WebVirtualDirectory -Site "Test" -Application "Test" -Name "Virtual" | Should Not Be $null
+        }
+
+        It "adds a binding to the web site" {
+            $bindings = Get-ItemProperty "IIS:\Sites\Test" -Name bindings
+            $bindings.collection.Protocol -contains "net.msmq" | Should Be $true
         }
 
         Remove-Item -Recurse -Force .\tmp -ErrorAction Ignore | Out-Null
