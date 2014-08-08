@@ -36,6 +36,10 @@ function Test-TargetResource
         [parameter(Mandatory = $true)]
         [System.String] $Site,
 
+        [ValidateSet("Present","Absent")]
+        [System.String]
+        $Ensure  = "Present",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $Bindings = @()
     )
@@ -68,14 +72,23 @@ function Set-TargetResource
         [parameter(Mandatory = $true)]
         [System.String] $Site,
 
+        [ValidateSet("Present","Absent")]
+        [System.String]
+        $Ensure  = "Present",
+
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $Bindings = @()
     )
 
-    $newBindings = $Bindings
-    $newBindings += (Get-TargetResource -Site $Site).Bindings
+    $newBindings = @((Get-TargetResource -Site $Site).Bindings)
+    $newBindings += $Bindings
 
-    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $newBindings
+    $bindingsValue = $newBindings | ForEach-Object {@{
+        bindingInformation = $_.BindingInformation
+        protocol = $_.Protocol
+    }}
+
+    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $bindingsValue
 }
 
 function equalBindings {
