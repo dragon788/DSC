@@ -12,17 +12,16 @@ function Get-TargetResource
 
     $bindings = Get-ItemProperty "IIS:\Sites\${Site}" -Name bindings
 
-    $transformedBindings = $bindings.collection | ForEach-Object {
-        $bindingProperties = @{
-            BindingInformation = $_.bindingInformation
-            Protocol = $_.protocol
+    if($bindings.count -eq 0) {
+        return @{
+            Bindings = @()
+            Ensure = "Absent"
+            Site = $Site
         }
-
-        New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $bindingProperties
     }
 
     return @{
-        Bindings = $transformedBindings
+        Bindings = cimifyBindings $bindings
         Ensure = "Present"
         Site = $Site
     }
@@ -44,24 +43,15 @@ function Test-TargetResource
         $Bindings = @()
     )
 
-    $currentBindings = Get-TargetResource -Site $Site
+    $currentBindings = @((Get-TargetResource -Site $Site).Bindings)
 
-    $unfoundBinding = $false
-    $Bindings | ForEach-Object {
-        $foundBinding = $false
-        $bindingToFind = $_
-        $currentBindings.Bindings | ForEach-Object {
-            if(-not $foundBinding) {
-                $foundBinding = equalBindings $bindingToFind $_
-            }
-        }
+    $presentBindings = commonBindings $Bindings $currentBindings
 
-        if(-not $foundBinding) {
-            $unfoundBinding = $true
-        }
+    if ($Ensure -eq "Absent") {
+        return $presentBindings.count -eq 0
     }
 
-    return -not $unfoundBinding
+    return @($presentBindings).count -eq $Bindings.count
 }
 
 function Set-TargetResource
@@ -80,8 +70,15 @@ function Set-TargetResource
         $Bindings = @()
     )
 
-    $newBindings = @((Get-TargetResource -Site $Site).Bindings)
-    $newBindings += $Bindings
+    $currentBindings = @((Get-TargetResource -Site $Site).Bindings)
+
+    if ($Ensure -eq "Absent") {
+        $newBindings = removeBindings $currentBindings $Bindings
+    }
+    else {
+        $newBindings = $currentBindings
+        $newBindings += $Bindings
+    }
 
     $bindingsValue = $newBindings | ForEach-Object {@{
         bindingInformation = $_.BindingInformation
@@ -91,6 +88,38 @@ function Set-TargetResource
     Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $bindingsValue
 }
 
+function cimifyBindings {
+    [CmdletBinding()]
+    param($bindings)
+
+    return $bindings.collection | ForEach-Object {
+        $bindingProperties = @{
+            BindingInformation = $_.bindingInformation
+            Protocol = $_.protocol
+        }
+
+        New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $bindingProperties
+    }
+}
+
+function commonBindings {
+    [CmdletBinding()]
+    param($bindings, $otherBindings)
+
+    $bindings | Where-Object { containsBinding $otherBindings $_ }
+}
+
+function containsBinding {
+    [CmdletBinding()]
+    param($bindings, $binding)
+
+    $bindings | ForEach-Object {
+        if(equalBindings $_ $binding) { return $true }
+    }
+
+    return $false
+}
+
 function equalBindings {
     [CmdletBinding()]
     param($bindingOne, $bindingTwo)
@@ -98,6 +127,13 @@ function equalBindings {
     $matchingBindingInformation = $bindingOne.BindingInformation -eq $bindingTwo.BindingInformation
     $matchingProtocol = $bindingOne.Protocol -eq $bindingTwo.Protocol
     return $matchingBindingInformation -and $matchingProtocol
+}
+
+function removeBindings {
+    [CmdletBinding()]
+    param($bindings, $bindingsToRemove)
+
+    $bindings | Where-Object { -not (containsBinding $bindingsToRemove $_) }
 }
 
 Export-ModuleMember -Function *-TargetResource
