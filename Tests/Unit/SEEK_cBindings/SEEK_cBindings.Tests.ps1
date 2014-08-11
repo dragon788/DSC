@@ -64,10 +64,24 @@ Describe "Test-TargetResource" {
     $secondBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $secondBindingProperty
 
     $missingBindingProperty = @{
-                BindingInformation = "Missing Binding Information"
-                Protocol = "protocol"
-            }
+        BindingInformation = "Missing Binding Information"
+        Protocol = "protocol"
+    }
     $missingBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $missingBindingProperty
+
+    $httpBindingProperty = @{
+        HostName = "the-host"
+        IPAddress = "127.0.0.1"
+        Port = 80
+        Protocol = "http"
+    }
+
+    $httpBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $httpBindingProperty
+
+    $httpBindingGetItemProperties = @{
+        BindingInformation = "127.0.0.1:80:the-host"
+        Protocol = "http"
+    }
 
     $currentBindingProperties = @($firstBindingProperty, $secondBindingProperty)
 
@@ -83,6 +97,12 @@ Describe "Test-TargetResource" {
             Mock Get-ItemProperty {@{collection = @($firstBindingProperty, $missingBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
 
             (Test-TargetResource -Ensure "Absent" -Bindings @($missingBinding) -Site "MySite") | Should Be $false
+        }
+
+        It "is false, when a http binding is present" {
+            Mock Get-ItemProperty {@{collection = @($firstBindingProperty, $httpBindingGetItemProperties)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
+
+            (Test-TargetResource -Ensure "Absent" -Bindings @($httpBinding) -Site "MySite") | Should Be $false
         }
     }
 
@@ -142,17 +162,36 @@ Describe "Set-TargetResource" {
     }
     $secondBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $secondBindingProperty
 
+    $httpBindingProperty = @{
+        HostName = "the-host"
+        IPAddress = "127.0.0.1"
+        Port = 80
+        Protocol = "http"
+    }
+    $httpBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $httpBindingProperty
+
     Mock Get-ItemProperty {@{collection = @($firstBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
 
     Context "when ensure present" {
-        Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
-            $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
-            $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
-            $Value.BindingInformation -contains "Second Binding Information" -and $Value.Protocol -contains "another protocol"
-        }
 
         It "preserves existing bindings while adding new ones" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+                $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
+                $Value.BindingInformation -contains "Second Binding Information" -and $Value.Protocol -contains "another protocol"
+            }
             Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
+            Assert-VerifiableMocks
+        }
+
+        It "preserving existing bindings while adding a http binding" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+                $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
+                $Value.BindingInformation -contains "127.0.0.1:80:the-host" -and $Value.Protocol -contains "http"
+            }
+
+            Set-TargetResource -Bindings @($httpBinding) -Site "MySite"
             Assert-VerifiableMocks
         }
     }

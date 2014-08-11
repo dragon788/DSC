@@ -10,21 +10,7 @@ function Get-TargetResource
         [System.String] $Site
     )
 
-    $bindings = Get-ItemProperty "IIS:\Sites\${Site}" -Name bindings
-
-    if($bindings.count -eq 0) {
-        return @{
-            Bindings = @()
-            Ensure = "Absent"
-            Site = $Site
-        }
-    }
-
-    return @{
-        Bindings = cimifyBindings $bindings
-        Ensure = "Present"
-        Site = $Site
-    }
+    get-BindingsResource (get-BindingProperty $Site) $Site
 }
 
 function Test-TargetResource
@@ -43,12 +29,10 @@ function Test-TargetResource
         $Bindings = @()
     )
 
-    $currentBindings = @((Get-TargetResource -Site $Site).Bindings)
-
-    $presentBindings = commonBindings $Bindings $currentBindings
+    $presentBindings = select-CommonBindings (new-BindingsWithBindingInformation $Bindings) (get-CurrentBindings $Site)
 
     if ($Ensure -eq "Absent") {
-        return $presentBindings.count -eq 0
+        return @($presentBindings).count -eq 0
     }
 
     return @($presentBindings).count -eq $Bindings.count
@@ -70,57 +54,10 @@ function Set-TargetResource
         $Bindings = @()
     )
 
-    $currentBindings = @((Get-TargetResource -Site $Site).Bindings)
-
-    if ($Ensure -eq "Absent") {
-        $newBindings = removeBindings $currentBindings $Bindings
-    }
-    else {
-        $newBindings = $currentBindings
-        $newBindings += $Bindings
-    }
-
-    $bindingsValue = $newBindings | ForEach-Object {@{
-        bindingInformation = $_.BindingInformation
-        protocol = $_.Protocol
-    }}
-
-    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value $bindingsValue
+    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue (new-BindingsForSite $Ensure $Bindings $Site))
 }
 
-function cimifyBindings {
-    [CmdletBinding()]
-    param($bindings)
-
-    return $bindings.collection | ForEach-Object {
-        $bindingProperties = @{
-            BindingInformation = $_.bindingInformation
-            Protocol = $_.protocol
-        }
-
-        New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $bindingProperties
-    }
-}
-
-function commonBindings {
-    [CmdletBinding()]
-    param($bindings, $otherBindings)
-
-    $bindings | Where-Object { containsBinding $otherBindings $_ }
-}
-
-function containsBinding {
-    [CmdletBinding()]
-    param($bindings, $binding)
-
-    $bindings | ForEach-Object {
-        if(equalBindings $_ $binding) { return $true }
-    }
-
-    return $false
-}
-
-function equalBindings {
+function compare-Bindings {
     [CmdletBinding()]
     param($bindingOne, $bindingTwo)
 
@@ -129,11 +66,149 @@ function equalBindings {
     return $matchingBindingInformation -and $matchingProtocol
 }
 
-function removeBindings {
+function containsBinding {
     [CmdletBinding()]
-    param($bindings, $bindingsToRemove)
+    param($bindings, $binding)
 
-    $bindings | Where-Object { -not (containsBinding $bindingsToRemove $_) }
+    $bindings | ForEach-Object {
+        if(compare-Bindings $_ $binding) { return $true }
+    }
+
+    $false
+}
+
+function get-BindingInformation {
+    [CmdletBinding()]
+    param($binding)
+
+    $bindingInformation = $binding.BindingInformation
+
+    if($bindingInformation -eq $null -and $binding.Protocol -eq "http") {
+        $bindingInformation = get-HttpBindingInformation $binding
+    }
+
+    $bindingInformation
+}
+
+function get-BindingProperty
+{
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String] $Site
+    )
+
+    (Get-ItemProperty "IIS:\Sites\${Site}" -Name bindings)
+}
+
+function get-BindingsResource {
+    [CmdletBinding()]
+    param($bindings, $site)
+
+    $result = @{
+        Bindings = @()
+        Ensure = "Absent"
+        Site = $site
+    }
+
+    if($bindings.count -ne 0) {
+        $result.Bindings = new-CimBindings $bindings
+        $result.Ensure = "Present"
+    }
+
+    $result
+}
+
+function get-CurrentBindings {
+    [CmdletBinding()]
+    param($site)
+
+    (Get-TargetResource -Site $site).Bindings
+}
+
+function get-HttpBindingInformation {
+    [CmdletBinding()]
+    param($httpBinding)
+
+    $hostName = $binding.HostName
+    $ipAddress = $binding.IPAddress
+    $port = $binding.Port
+
+    "${ipAddress}:${port}:${hostName}"
+}
+
+function new-BindingsForSite {
+    [CmdletBinding()]
+    param($ensure, $bindings, $site)
+
+    $currentBindings = @(get-CurrentBindings $site)
+
+    if ($Ensure -eq "Absent") {
+        return select-FromBindingsWithoutBindings -From $currentBindings -Without $Bindings
+    }
+
+    $newBindings = $currentBindings
+    $newBindings += $Bindings
+    return $newBindings
+}
+
+function new-BindingsWithBindingInformation {
+    [CmdletBinding()]
+    param($bindings)
+
+    $bindings | ForEach-Object {
+        new-CimBinding @{
+            BindingInformation = get-BindingInformation $_
+            Protocol = $_.Protocol
+        }
+    }
+}
+
+function new-BindingsValue
+{
+    [CmdletBinding()]
+    param($bindings)
+
+    (new-BindingsWithBindingInformation $bindings) | ForEach-Object {
+        @{
+            bindingInformation = $_.BindingInformation
+            protocol = $_.Protocol
+        }
+    }
+}
+
+function new-CimBinding {
+    [CmdletBinding()]
+    param($binding)
+
+    $bindingProperties = @{
+        BindingInformation = $binding.bindingInformation
+        Protocol = $binding.protocol
+    }
+
+    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $bindingProperties
+}
+
+function new-CimBindings {
+    [CmdletBinding()]
+    param($bindings)
+
+    $bindings.collection | ForEach-Object { new-CimBinding $_ }
+}
+
+function select-CommonBindings {
+    [CmdletBinding()]
+    param($bindings, $otherBindings)
+
+    $bindings | Where-Object { containsBinding $otherBindings $_ }
+}
+
+function select-FromBindingsWithoutBindings {
+    [CmdletBinding()]
+    param($from, $without)
+
+    $from | Where-Object { -not (containsBinding $without $_) }
 }
 
 Export-ModuleMember -Function *-TargetResource

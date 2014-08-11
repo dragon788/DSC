@@ -92,10 +92,18 @@ Configuration TestConfiguration
         cBindings TestNewBindings
         {
             Ensure = "Present"
-            Bindings = @(SEEK_cBinding {
-                BindingInformation = "localhost/server"
-                Protocol = "net.msmq"
-            })
+            Bindings = @(
+                SEEK_cBinding {
+                    BindingInformation = "localhost/server"
+                    Protocol = "net.msmq"
+                }
+                SEEK_cBinding {
+                    HostName = "the-host"
+                    IPAddress = "127.0.0.1"
+                    Port = 80
+                    Protocol = "http"
+                }
+            )
             Site = "Test"
         }
     }
@@ -131,9 +139,14 @@ Describe "WebSite DSC Resource" {
             Get-WebVirtualDirectory -Site "Test" -Application "Test" -Name "Virtual" | Should Not Be $null
         }
 
-        It "adds a binding to the web site" {
+        It "adds bindings to the web site" {
             $bindings = Get-ItemProperty "IIS:\Sites\Test" -Name bindings
+
             $bindings.collection.Protocol -contains "net.msmq" | Should Be $true
+            $bindings.collection.BindingInformation -contains "localhost/server" | Should Be $true
+
+            $bindings.collection.Protocol -contains "http" | Should Be $true
+            $bindings.collection.BindingInformation -contains "127.0.0.1:80:the-host" | Should Be $true
         }
 
         Remove-Item -Recurse -Force .\tmp -ErrorAction Ignore | Out-Null
