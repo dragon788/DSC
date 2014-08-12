@@ -10,7 +10,7 @@ function Get-TargetResource
         [System.String] $Site
     )
 
-    get-BindingsResource (get-BindingProperty $Site) $Site
+    get-BindingsResource (get-BindingConfigElements $Site) $Site
 }
 
 function Test-TargetResource
@@ -29,13 +29,13 @@ function Test-TargetResource
         $Bindings = @()
     )
 
-    $presentBindings = select-CommonBindings (new-BindingsWithBindingInformation $Bindings) (get-CurrentBindings $Site)
+    $presentBindings = select-CommonCimBindings (new-CimBindingsWithBindingInformation $Bindings) (get-CurrentCimBindings $Site)
 
     if ($Ensure -eq "Absent") {
         return @($presentBindings).count -eq 0
     }
 
-    return @($presentBindings).count -eq $Bindings.count
+    return (@($presentBindings).count -eq $Bindings.count)
 }
 
 function Set-TargetResource
@@ -54,43 +54,106 @@ function Set-TargetResource
         $Bindings = @()
     )
 
-    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue (new-BindingsForSite $Ensure $Bindings $Site))
+    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site
+    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue $newCimBindings)
+
+    $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object {
+        $ip = get-HttpSysIp $_.IPAddress
+        $path = $_.CertificatePath
+        $port = $_.Port
+        $thumbprint = $_.CertificateThumbprint
+        Get-Item "${path}\${thumbprint}" | New-Item "${ip}!${port}"
+    }
 }
 
-function compare-Bindings {
+function New-CimBinding
+{
     [CmdletBinding()]
-    param($bindingOne, $bindingTwo)
+    param
+    (
+        [System.String] $BindingInformation,
+        [System.String] $Protocol
+    )
 
-    $matchingBindingInformation = $bindingOne.BindingInformation -eq $bindingTwo.BindingInformation
-    $matchingProtocol = $bindingOne.Protocol -eq $bindingTwo.Protocol
-    return $matchingBindingInformation -and $matchingProtocol
+    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property @{
+        BindingInformation = $BindingInformation
+        Protocol = $Protocol
+    }
 }
 
-function containsBinding {
+function New-HttpCimBinding {
+    [CmdletBinding()]
+    param
+    (
+        [System.String] $HostName,
+        [System.String] $IPAddress,
+        [System.UInt16] $Port
+    )
+
+    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property @{
+        HostName = $HostName
+        IPAddress = $IPAddress
+        Port = $Port
+        Protocol = "http"
+    }
+}
+
+function New-HttpsCimBinding {
+    [CmdletBinding()]
+    param
+    (
+        [System.String] $CertificatePath,
+        [System.String] $CertificateThumbprint,
+        [System.String] $CertificateStoreName,
+        [System.String] $IPAddress,
+        [System.UInt16] $Port
+    )
+
+    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property @{
+        CertificatePath = $CertificatePath
+        CertificateThumbprint = $CertificateThumbprint
+        CertificateStoreName = $CertificateStoreName
+        IPAddress = $IPAddress
+        Port = $Port
+        Protocol = "https"
+    }
+}
+
+function compare-CimBindings {
+    [CmdletBinding()]
+    param
+    (
+        $cimBinding,
+        $otherCimBinding
+    )
+
+    $matchingBindingInformation = $cimBinding.BindingInformation -eq $otherCimBinding.BindingInformation
+    $matchingProtocol = $cimBinding.Protocol -eq $otherCimBinding.Protocol
+
+    if (-not ($matchingBindingInformation -and $matchingProtocol)) { return $false }
+    if ($cimBinding.Protocol -eq "https") { return compare-CimHttpsBindings $cimBinding $otherCimBinding }
+
+    $true
+}
+
+function compare-CimHttpsBindings {
+    [CmdletBinding()]
+    param($cimHttpsBinding, $otherCimHttpsBinding)
+
+    $cimHttpsBinding.CertificateStoreName -eq $otherCimHttpsBinding.CertificateStoreName -and
+    $cimHttpsBinding.CertificateThumbprint -eq $otherCimHttpsBinding.CertificateThumbprint
+}
+
+function containsCimBinding {
     [CmdletBinding()]
     param($bindings, $binding)
 
-    $bindings | ForEach-Object {
-        if(compare-Bindings $_ $binding) { return $true }
-    }
-
-    $false
+    $result = $false
+    $bindings | ForEach-Object { if(compare-CimBindings $_ $binding) { $result = $true } }
+    $result
 }
 
-function get-BindingInformation {
-    [CmdletBinding()]
-    param($binding)
-
-    $bindingInformation = $binding.BindingInformation
-
-    if($bindingInformation -eq $null -and $binding.Protocol -eq "http") {
-        $bindingInformation = get-HttpBindingInformation $binding
-    }
-
-    $bindingInformation
-}
-
-function get-BindingProperty
+function get-BindingConfigElements
 {
     [CmdletBinding()]
     param
@@ -102,9 +165,26 @@ function get-BindingProperty
     (Get-ItemProperty "IIS:\Sites\${Site}" -Name bindings)
 }
 
-function get-BindingsResource {
+function get-BindingInformation
+{
     [CmdletBinding()]
-    param($bindings, $site)
+    param($binding)
+
+    if($binding.BindingInformation -ne $null) { return $binding.BindingInformation }
+
+    switch ($binding.Protocol)
+    {
+        "http"
+        { get-HttpBindingInformation $binding }
+        "https"
+        { get-HttpsBindingInformation $binding }
+    }
+}
+
+function get-BindingsResource
+{
+    [CmdletBinding()]
+    param($bindingConfigElements, $site)
 
     $result = @{
         Bindings = @()
@@ -112,57 +192,67 @@ function get-BindingsResource {
         Site = $site
     }
 
-    if($bindings.count -ne 0) {
-        $result.Bindings = new-CimBindings $bindings
+    if($bindingConfigElements.count -ne 0) {
+        $result.Bindings = new-CimBindingsFromConfigElements $bindingConfigElements
         $result.Ensure = "Present"
     }
 
     $result
 }
 
-function get-CurrentBindings {
+function get-CurrentCimBindings
+{
     [CmdletBinding()]
     param($site)
 
     (Get-TargetResource -Site $site).Bindings
 }
 
-function get-HttpBindingInformation {
+function get-HttpBindingInformation
+{
     [CmdletBinding()]
     param($httpBinding)
 
-    $hostName = $binding.HostName
-    $ipAddress = $binding.IPAddress
-    $port = $binding.Port
+    $hostName = $httpBinding.HostName
+    $ipAddress = $httpBinding.IPAddress
+    $port = $httpBinding.Port
 
     "${ipAddress}:${port}:${hostName}"
 }
 
-function new-BindingsForSite {
+function get-HttpsBindingInformation
+{
     [CmdletBinding()]
-    param($ensure, $bindings, $site)
+    param($httpsBinding)
 
-    $currentBindings = @(get-CurrentBindings $site)
+    $ipAddress = $httpsBinding.IPAddress
+    $port = $httpsBinding.Port
 
-    if ($Ensure -eq "Absent") {
-        return select-FromBindingsWithoutBindings -From $currentBindings -Without $Bindings
-    }
-
-    $newBindings = $currentBindings
-    $newBindings += $Bindings
-    return $newBindings
+    "${ipAddress}:${port}:"
 }
 
-function new-BindingsWithBindingInformation {
+function get-HttpSysIp
+{
     [CmdletBinding()]
-    param($bindings)
+    param($ip)
 
-    $bindings | ForEach-Object {
-        new-CimBinding @{
-            BindingInformation = get-BindingInformation $_
-            Protocol = $_.Protocol
-        }
+    if ($ip -eq "*") { return "0.0.0.0" }
+    $ip
+}
+
+function new-CimBindingsForSite {
+    [CmdletBinding()]
+    param($ensure, $cimBindings, $site)
+
+    $currentCimBindings = @(get-CurrentCimBindings $site)
+
+    if ($Ensure -eq "Absent") {
+        return select-FromCimBindingsWithoutCimBindings -From $currentCimBindings -Without $cimBindings
     }
+
+    $newBindings = $currentCimBindings
+    $newBindings += $cimBindings
+    return $newBindings
 }
 
 function new-BindingsValue
@@ -170,7 +260,7 @@ function new-BindingsValue
     [CmdletBinding()]
     param($bindings)
 
-    (new-BindingsWithBindingInformation $bindings) | ForEach-Object {
+    (new-CimBindingsWithBindingInformation $bindings) | ForEach-Object {
         @{
             bindingInformation = $_.BindingInformation
             protocol = $_.Protocol
@@ -178,37 +268,82 @@ function new-BindingsValue
     }
 }
 
-function new-CimBinding {
+function new-CimBindingsWithBindingInformation
+{
     [CmdletBinding()]
-    param($binding)
+    param($cimBindings)
 
-    $bindingProperties = @{
-        BindingInformation = $binding.bindingInformation
-        Protocol = $binding.protocol
+    $cimBindings | ForEach-Object {
+        new-CimBindingFromHash @{
+            BindingInformation = get-BindingInformation $_
+            CertificateStoreName = $_.CertificateStoreName
+            CertificateThumbprint = $_.CertificateThumbprint
+            HostName = $_.HostName
+            IPAddress = $_.IPAddress
+            Port = $_.Port
+            Protocol = $_.Protocol
+        }
+    }
+}
+
+function new-CimBindingFromConfigElement
+{
+    [CmdletBinding()]
+    param($bindingConfigElement)
+
+    $bindingHash = @{
+        BindingInformation = $bindingConfigElement.bindingInformation
+        Protocol = $bindingConfigElement.protocol
     }
 
-    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $bindingProperties
+    if ($bindingHash.Protocol -eq "https") {
+        $bindingHash.CertificateStoreName = $bindingConfigElement.certificateStoreName
+        $bindingHash.CertificateThumbprint = $bindingConfigElement.certificateHash
+    }
+
+    new-CimBindingFromHash $bindingHash
 }
 
-function new-CimBindings {
+function new-CimBindingsFromConfigElements
+{
     [CmdletBinding()]
-    param($bindings)
+    param($bindingConfigElements)
 
-    $bindings.collection | ForEach-Object { new-CimBinding $_ }
+    $bindingConfigElements.collection | ForEach-Object { new-CimBindingFromConfigElement $_ }
 }
 
-function select-CommonBindings {
+function new-CimBindingFromHash
+{
     [CmdletBinding()]
-    param($bindings, $otherBindings)
+    param($bindingHash)
 
-    $bindings | Where-Object { containsBinding $otherBindings $_ }
+    New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property (new-HashWithoutNullValues $bindingHash)
 }
 
-function select-FromBindingsWithoutBindings {
+function new-HashWithoutNullValues
+{
+    [CmdletBinding()]
+    param($hashtable)
+
+    $result = @{}
+    $hashtable.Keys | Where { $hashtable.$_ -ne $null } | ForEach { $result.$_ = ($hashtable.$_) }
+    $result
+}
+
+function select-CommonCimBindings
+{
+    [CmdletBinding()]
+    param($cimBindings, $otherCimBindings)
+
+    $cimBindings | Where-Object { containsCimBinding $otherCimBindings $_ }
+}
+
+function select-FromCimBindingsWithoutCimBindings
+{
     [CmdletBinding()]
     param($from, $without)
 
-    $from | Where-Object { -not (containsBinding $without $_) }
+    $from | Where-Object { -not (containsCimBinding $without $_) }
 }
 
 Export-ModuleMember -Function *-TargetResource

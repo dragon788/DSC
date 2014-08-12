@@ -1,15 +1,22 @@
 [ClassVersion("1.0.0")]
 class SEEK_cBinding
 {
-	[ValueMap{"http", "net.msmq", "net.pipe", "net.tcp"},Values{"http", "net.msmq", "net.pipe", "net.tcp"}] string Protocol;
+	[ValueMap{"http", "https", "net.msmq", "net.pipe", "net.tcp"},Values{"http", "https", "net.msmq", "net.pipe", "net.tcp"}] string Protocol;
 
-	// Derived for HTTP
+	// Derived for HTTP and HTTPS
 	string BindingInformation;
 
-	// Optional
-	string HostName;
+	// HTTP*
 	UInt16 Port;
-	String IPAddress;
+	string IPAddress;
+
+	// HTTP
+	string HostName;
+
+	// HTTPS
+	string CertificatePath;
+	string CertificateStoreName;
+	string CertificateThumbprint;
 };
 
 [ClassVersion("1.0.0"), FriendlyName("cBindings")]
