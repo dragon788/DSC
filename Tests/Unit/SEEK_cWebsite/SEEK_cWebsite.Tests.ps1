@@ -437,17 +437,35 @@ Describe "Set-TargetResource" {
             certificateHash = "OLDTHUMBPRINT"
             certificateStoreName = "Cert://localmachine/my"
         }
+        $bindingInfo = @(New-CimInstance -ClassName SEEK_cWebBindingInformation `
+            -Namespace root/microsoft/Windows/DesiredStateConfiguration `
+            -ClientOnly `
+            -Property $httpsBindingProperties
+        )
         Mock Get-ChildItem {$mockCertificate} -ParameterFilter {$Path -eq "Cert://localmachine/my"}
         Mock Get-WebBinding {$mockHttpsBinding} -ParameterFilter {$Name -eq "MySite" -and $Port -eq 443}
-        Mock Set-BindingCertificate {}
 
-        It "replaces the ssl certificate on the web site binding" {
-            $bindingInfo = @(New-CimInstance -ClassName SEEK_cWebBindingInformation `
-                -Namespace root/microsoft/Windows/DesiredStateConfiguration `
-                -ClientOnly `
-                -Property $httpsBindingProperties
-            )
-            Mock Set-BindingCertificate {} -Verifiable -ParameterFilter {($Binding.bindingInformation) -eq "192.168.200.1:443:www.mysite.com" -and $CertificateThumbprint -eq "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E" -and $CertificateStoreName -eq "My"}
+        It "leaves the ssl binding untouched, if it is the same" {
+            Mock New-Item {}
+            Mock Test-Path { $true }
+            Mock Get-Item { New-Object PSObject -Property @{ Thumbprint = "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E" } } -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443"}
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $bindingInfo
+            Assert-MockCalled New-Item -Times 0
+        }
+
+        It "replaces the existing ssl binding, if it is different" {
+            Mock Test-Path { $true }
+            Mock Get-Item { New-Object PSObject -Property @{ Thumbprint = "OTHERTHUMBPRINT" } } -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443"}
+            Mock Remove-Item {} -Verifiable -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443"}
+            Mock New-Item {} -Verifiable -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443" -and ($Value.Thumbprint) -eq "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E"}
+            Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $bindingInfo
+            Assert-VerifiableMocks
+        }
+
+        It "creates a new ssl binding, if one does not already exist" {
+            Mock Test-Path { $false }
+            Mock Get-Item {} -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443"}
+            Mock New-Item {} -Verifiable -ParameterFilter {$Path -eq "IIS:\SslBindings\192.168.200.1!443" -and ($Value.Thumbprint) -eq "6CAE3EB1EAE470FA836B350E227B3AE2E9B6F93E"}
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $bindingInfo
             Assert-VerifiableMocks
         }

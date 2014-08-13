@@ -990,7 +990,7 @@ function UpdateBindings
     foreach($binding in $HttpsBindingInfo)
     {
         $Port = $Binding.CimInstanceProperties["Port"].Value
-        $CertificateStoreName = $Binding.CimInstanceProperties["CertificateStoreName"].Value
+        $IpAddress = $Binding.CimInstanceProperties["IPAddress"].Value
         $SslSubject = $Binding.CimInstanceProperties["SslSubject"].Value
         $SslCertPath = $Binding.CimInstanceProperties["SslCertPath"].Value
 
@@ -1001,14 +1001,14 @@ function UpdateBindings
                 $theCert = Get-ChildItem -path $SslCertPath | Where-Object {$_.Subject -eq $SslSubject }
 
                 Set-BindingCertificate `
-                    -Binding (Get-WebBinding -name $Name -Port $Port) `
-                    -CertificateThumbprint ($theCert.Thumbprint) `
-                    -CertificateStoreName $CertificateStoreName
+                    -IpAddress $IpAddress `
+                    -Port $Port `
+                    -Certificate $theCert
             }
         }
         catch
         {
-            Write-Error $_
+            throw $_
             ThrowTerminatingError `
                 -ErrorId "WebBindingCertifcateError" `
                 -ErrorMessage  ($($LocalizedData.WebBindingCertifcateError) -f ${CertificateThumbprint}) `
@@ -1025,15 +1025,28 @@ function Set-BindingCertificate
     Param
     (
         [parameter(Mandatory=$true)]
-        [System.Object]$Binding,
+        [System.Object]$Certificate,
 
-        [parameter(Mandatory=$true)]
-        [System.String]$CertificateThumbprint,
+        [System.String]$IpAddress = "0.0.0.0",
 
-        [parameter(Mandatory=$true)]
-        [System.String]$CertificateStoreName
+        [System.String]$Port = 443
     )
-    $Binding.AddSslCertificate($CertificateThumbprint, $CertificateStoreName)
+    $path = "IIS:\SslBindings\${IpAddress}!${Port}"
+
+    if (Test-Path $path)
+    {
+        $thumbprint = (Get-Item $path).Thumbprint
+        if ($Certificate.Thumbprint -eq $thumbprint)
+        {
+            return
+        }
+        else
+        {
+            Remove-Item $path
+        }
+    }
+
+    New-Item -Path $path -Value $Certificate
 }
 
 function Get-WebBindingObject
