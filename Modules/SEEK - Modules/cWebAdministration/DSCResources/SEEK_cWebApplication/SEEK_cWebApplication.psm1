@@ -23,6 +23,7 @@ function Get-TargetResource
             PhysicalPath = $webApplication.PhysicalPath
             Ensure = "Present"
             AuthenticationInfo = Get-AuthenticationInfo -Website $Website -ApplicationName $Name
+            SslFlags = (Get-SslFlags -Location "${Website}/${Name}")
         }
     }
 
@@ -33,6 +34,7 @@ function Get-TargetResource
         PhysicalPath = $null
         Ensure = "Absent"
         AuthenticationInfo = $null
+        SslFlags = $null
     }
 }
 
@@ -53,6 +55,9 @@ function Set-TargetResource
 
         [parameter(Mandatory = $true)]
         [System.String]$PhysicalPath,
+
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
 
         [ValidateSet("Present","Absent")]
         [System.String]$Ensure = "Present",
@@ -86,6 +91,7 @@ function Set-TargetResource
         }
 
         Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+        Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
     }
     elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
     {
@@ -113,6 +119,9 @@ function Test-TargetResource
         [parameter(Mandatory = $true)]
         [System.String]$PhysicalPath,
 
+        [ValidateNotNull()]
+        [string]$SslFlags = "",
+
         [ValidateSet("Present","Absent")]
         [System.String]$Ensure = "Present",
 
@@ -128,6 +137,7 @@ function Test-TargetResource
         if(($webApplication.Ensure -eq $Ensure) `
             -and ($webApplication.PhysicalPath -eq $PhysicalPath) `
             -and ($webApplication.WebAppPool -eq $WebAppPool) `
+            -and ((Get-SslFlags -Location "${Website}/${Name}") -eq $SslFlags) `
             -and (Test-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo))
         {
             return $true
@@ -290,6 +300,19 @@ function Get-DefaultAuthenticationInfo
     New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
         -ClientOnly `
         -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
+}
+
+function Get-SslFlags
+{
+    [CmdletBinding()]
+    param
+    (
+        [System.String]$Location
+    )
+
+    $sslFlags = Get-WebConfiguration -PSPath IIS:\Sites -Location $Location -Filter 'system.webserver/security/access' | % { $_.sslFlags }
+    $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
+    return $sslFlags
 }
 
 Export-ModuleMember -Function *-TargetResource
