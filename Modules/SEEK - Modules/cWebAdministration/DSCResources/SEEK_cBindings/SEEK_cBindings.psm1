@@ -62,7 +62,8 @@ function Set-TargetResource
         $path = $_.CertificatePath
         $port = $_.Port
         $thumbprint = $_.CertificateThumbprint
-        Get-Item "${path}\${thumbprint}" | New-Item "${ip}!${port}"
+
+        Get-Item "${path}\${thumbprint}" | New-Item "IIS:\SslBindings\${ip}!${port}"
     }
 }
 

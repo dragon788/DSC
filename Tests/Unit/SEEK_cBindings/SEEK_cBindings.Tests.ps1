@@ -279,7 +279,7 @@ Describe "Set-TargetResource" {
 
         It "adds the binding, preserving existing bindings, and assigns the certificate, when ensure is present" {
             Mock Get-Item { @{} } -Verifiable -ParameterFilter { $Path -eq "ssl-cert-path\thumbprint" }
-            Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq "0.0.0.0!443" }
+            Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq "IIS:\SslBindings\0.0.0.0!443" }
 
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
                 $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
