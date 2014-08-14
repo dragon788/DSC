@@ -12,8 +12,6 @@ $MockWebApplication | Add-Member PhysicalPath "C:\App"
 $MockWebApplication | Add-Member ApplicationPool "MyAppPool"
 
 Describe "Get-TargetResource" {
-    Mock Get-WebConfiguration
-
     Context "when the web application is present" {
         Mock Find-UniqueWebApplication { return $MockWebApplication }
         Mock Test-AuthenticationEnabled { return $true } `
@@ -49,8 +47,6 @@ Describe "Get-TargetResource" {
 }
 
 Describe "Test-TargetResource" {
-    Mock Get-WebConfiguration
-
     Context "when the web application is present" {
         Mock Find-UniqueWebApplication { return $MockWebApplication }
 
@@ -105,8 +101,6 @@ Describe "Set-TargetResource" {
     Mock Remove-WebApplication
     Mock Set-ItemProperty
     Mock Set-WebConfigurationProperty
-    Mock Get-WebConfiguration
-    Mock Set-WebConfiguration
 
     Context "when the web application is absent" {
         It "installs the web application" {

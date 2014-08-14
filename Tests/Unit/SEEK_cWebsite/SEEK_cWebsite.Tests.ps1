@@ -5,6 +5,7 @@ Invoke-Expression $code
 Mock Get-Website {$null}
 Mock Get-ItemProperty {return $null}
 Mock Get-WebConfigurationProperty {return $null}
+Mock Get-WebConfiguration {$null}
 
 $MockWebsite = New-Object PSObject -Property @{
     state = "Started"
@@ -38,8 +39,6 @@ $MockHttpsBinding = New-Object PSObject -Property @{
 }
 
 Describe "Get-TargetResource" {
-    Mock Get-WebConfiguration
-
     Context "when the web site is present" {
         Mock Get-Website {$MockWebsite}
         Mock Get-WebConfigurationProperty {New-Object PSObject -Property @{Value = $true}} `
@@ -203,7 +202,6 @@ Describe "Set-TargetResource" {
     Mock Set-WebConfigurationProperty {}
     Mock Set-WebConfiguration {}
     Mock Set-ItemProperty {}
-    Mock Get-WebConfiguration
 
     $HttpBindingInfo = New-CimInstance -ClassName SEEK_cWebBindingInformation `
         -Namespace root/microsoft/Windows/DesiredStateConfiguration `
