@@ -55,16 +55,12 @@ function Set-TargetResource
     )
 
     $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site
+
     Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue $newCimBindings)
+    $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
-    $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object {
-        $ip = get-HttpSysIp $_.IPAddress
-        $path = $_.CertificatePath
-        $port = $_.Port
-        $thumbprint = $_.CertificateThumbprint
-
-        Get-Item "${path}\${thumbprint}" | New-Item "IIS:\SslBindings\${ip}!${port}"
-    }
+    $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
+    Set-ItemProperty "IIS:\Sites\${Site}" -Name EnabledProtocols -Value ($protocols -join ',')
 }
 
 function New-CimBinding
@@ -118,6 +114,19 @@ function New-HttpsCimBinding {
         Port = $Port
         Protocol = "https"
     }
+}
+
+function add-SslCertificateForHttpsCimBinding
+{
+    [CmdletBinding()]
+    param($httpsCimBinding)
+
+    $ip = get-HttpSysIp $httpsCimBinding.IPAddress
+    $path = $httpsCimBinding.CertificatePath
+    $port = $httpsCimBinding.Port
+    $thumbprint = $httpsCimBinding.CertificateThumbprint
+
+    Get-Item "${path}\${thumbprint}" | New-Item "IIS:\SslBindings\${ip}!${port}"
 }
 
 function compare-CimBindings {

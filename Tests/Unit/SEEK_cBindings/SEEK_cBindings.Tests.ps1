@@ -206,17 +206,36 @@ Describe "Set-TargetResource" {
     }
     $secondBinding = New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property $secondBindingProperty
 
-
     Mock Get-ItemProperty {@{collection = @($firstBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
+    Mock Set-ItemProperty {} -ParameterFilter { $Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols"}
 
     Context "when ensure present" {
-
-        It "preserves existing bindings while adding new ones" {
+        It "preserves existing bindings" {
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
                 $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
-                $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
-                $Value.BindingInformation -contains "Second Binding Information" -and $Value.Protocol -contains "another protocol"
+                $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol"
             }
+
+            Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
+            Assert-VerifiableMocks
+        }
+
+        It "adds new bindings" {
+          Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+              $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+              $Value.BindingInformation -contains "Second Binding Information" -and $Value.Protocol -contains "another protocol"
+          }
+
+          Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
+          Assert-VerifiableMocks
+        }
+
+        It "enables protocols for the site" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols" -and
+                $Value -eq "protocol,another protocol"
+            }
+
             Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
             Assert-VerifiableMocks
         }
