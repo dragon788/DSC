@@ -21,7 +21,7 @@ Configuration TestConfiguration
             ManagedRuntimeVersion = "v2.0"
             ManagedPipelineMode = "Classic"
             Enable32BitAppOnWin64 = "True"
-            IdentityType = "SpecificUser"
+            IdentityType = "ApplicationPoolIdentity"
             UserName =  "bob"
             Password = "Password123"
         }
