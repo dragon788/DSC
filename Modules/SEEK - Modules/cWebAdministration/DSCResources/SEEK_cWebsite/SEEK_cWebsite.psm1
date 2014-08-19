@@ -313,12 +313,9 @@ function Set-TargetResource
                 #Update host entry if required
                 if ($HostFileInfo -ne $null)
                 {
-                    if(ValidateHostFileEntry -HostFileInfo $HostFileInfo)
-                    {
-                        UpdateHostFileEntry -HostFileInfo $HostFileInfo
+                  UpdateHostFileEntry -HostFileInfo $HostFileInfo
 
-                        Write-Verbose("Hostfile for website $Name has been updated.");
-                    }
+                  Write-Verbose("Hostfile for website $Name has been updated.")
                 }
 
                 Write-Verbose("successfully created website $Name")
