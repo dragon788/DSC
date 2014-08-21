@@ -64,15 +64,18 @@ If you wish to contribute to the SEEK DSC resources, please ensure you run the t
 
 #### Installing Pester
 
-The Pester project can be downloaded from GitHub as a [ZIP](https://github.com/pester/Pester/archive/master.zip) or cloned using [Git](https://github.com/pester/Pester.git). By default, the build expects Pester to be installed at `$(USERPROFILE)\Tools\Pester`. If you want to install Pester somewhere else you can set the `PESTER_HOME` environment variable with the install location.
+The Pester project can be downloaded from GitHub as a [ZIP](https://github.com/pester/Pester/archive/master.zip), cloned using [Git](https://github.com/pester/Pester.git) or installed as a [Chocolatey package](http://chocolatey.org/packages/poshgit). By default, the build expects Pester to be installed using Chocolatey. If you have installed pester manually, you can set the `PESTER_HOME` environment variable with the install location.
 
-##### Installing Pester in the default location
+##### Installing Pester Chocolatey Package
 
-- Clone the Git repository:
+- Install Chocolatey
 ```
-PS> mkdir $env:USERPROFILE\Tools
-PS> cd $env:USERPROFILE\Tools
-PS> git clone https://github.com/pester/Pester.git
+PS> Set-ExecutionPolicy RemoteSigned
+PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
+```
+- Install Pester package
+```
+PS> choco install pester -Version 2.1.0
 ```
 
 ##### Installing Pester in a custom location

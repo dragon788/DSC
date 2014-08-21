@@ -1,7 +1,7 @@
 <Project DefaultTargets="All" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">$(WINDIR)\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
-    <PESTER_HOME Condition=" '$(PESTER_HOME)'=='' ">$(USERPROFILE)\Tools\Pester</PESTER_HOME>
+    <PESTER_HOME Condition=" '$(PESTER_HOME)'=='' ">$(ChocolateyInstall)\lib\pester.2.1.0\tools</PESTER_HOME>
     <PesterExe Condition=" '$(PesterExe)'=='' ">$(PESTER_HOME)\bin\pester.bat</PesterExe>
   </PropertyGroup>
 
