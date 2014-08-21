@@ -192,7 +192,7 @@ function Test-AuthenticationEnabled
     $prop = Get-WebConfigurationProperty `
         -Filter /system.WebServer/security/authentication/${Type}Authentication `
         -Name enabled `
-        -Location "${WebSite}/${Name}"
+        -Location "${WebSite}/${ApplicationName}"
     return $prop.Value
 }
 
