@@ -26,16 +26,20 @@ function Test-TargetResource
         $Ensure  = "Present",
 
         [Microsoft.Management.Infrastructure.CimInstance[]]
-        $Bindings = @()
+        $Bindings = @(),
+
+        [System.Boolean]
+        $Clear = $false
     )
 
-    $presentBindings = select-CommonCimBindings (new-CimBindingsWithBindingInformation $Bindings) (get-CurrentCimBindings $Site)
+    $currentCimBindings = get-CurrentCimBindings $Site
+    $commonCimBindings = select-CommonCimBindings (new-CimBindingsWithBindingInformation $Bindings) $currentCimBindings
 
-    if ($Ensure -eq "Absent") {
-        return @($presentBindings).count -eq 0
-    }
+    if (($Ensure -eq "Absent") -and $Clear) { return (@($currentCimBindings).count -eq 0) -and (@($commonCimBindings).count -eq 0) }
+    if ($Ensure -eq "Absent") { return @($commonCimBindings).count -eq 0 }
 
-    return (@($presentBindings).count -eq $Bindings.count)
+    if ($Clear) { return $currentCimBindings.count -eq $commonCimBindings.count }
+    return (@($commonCimBindings).count -eq $Bindings.count)
 }
 
 function Set-TargetResource
@@ -51,10 +55,13 @@ function Set-TargetResource
         $Ensure  = "Present",
 
         [Microsoft.Management.Infrastructure.CimInstance[]]
-        $Bindings = @()
+        $Bindings = @(),
+
+        [System.Boolean]
+        $Clear = $false
     )
 
-    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site
+    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
 
     Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue $newCimBindings)
     $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
@@ -252,9 +259,11 @@ function get-HttpSysIp
 
 function new-CimBindingsForSite {
     [CmdletBinding()]
-    param($ensure, $cimBindings, $site)
+    param($ensure, $cimBindings, $site, $clear = $false)
 
-    $currentCimBindings = @(get-CurrentCimBindings $site)
+    $currentCimBindings = @()
+
+    if (!$clear) { $currentCimBindings = @(get-CurrentCimBindings $site) }
 
     if ($Ensure -eq "Absent") {
         return select-FromCimBindingsWithoutCimBindings -From $currentCimBindings -Without $cimBindings

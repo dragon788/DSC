@@ -75,6 +75,11 @@ Describe "Test-TargetResource" {
             (Test-TargetResource -Ensure "Absent" -Bindings @($missingBinding) -Site "MySite") | Should Be $true
         }
 
+        It "is false, when all provided bindings are absent, but there are existing bindings, and the clear flag is set" {
+            Mock Get-ItemProperty {@{collection = @($firstBindingProperty, $secondBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
+            (Test-TargetResource -Ensure "Absent" -Bindings @($missingBinding) -Clear $true -Site "MySite") | Should Be $false
+        }
+
         It "is false, when a binding that should be absent is present" {
             Mock Get-ItemProperty {@{collection = @($firstBindingProperty, $missingBindingProperty)}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
             (Test-TargetResource -Ensure "Absent" -Bindings @($missingBinding) -Site "MySite") | Should Be $false
@@ -90,6 +95,10 @@ Describe "Test-TargetResource" {
 
         It "is true, when unknown bindings are present, but all requested bindings are present" {
             (Test-TargetResource -Bindings @($firstBinding) -Site "MySite") | Should Be $true
+        }
+
+        It "is false, when unknown bindings are present, all requested bindings are present, and the clear flag is set" {
+            (Test-TargetResource -Bindings @($firstBinding) -Clear $true -Site "MySite") | Should Be $false
         }
 
         It "is false, when the binding information of one binding is absent" {
@@ -210,7 +219,7 @@ Describe "Set-TargetResource" {
     Mock Set-ItemProperty {} -ParameterFilter { $Path -eq "IIS:\Sites\MySite" -and $Name -eq "EnabledProtocols"}
 
     Context "when ensure present" {
-        It "preserves existing bindings" {
+        It "preserves existing bindings by default" {
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
                 $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
                 $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol"
@@ -239,19 +248,41 @@ Describe "Set-TargetResource" {
             Set-TargetResource -Bindings @($secondBinding) -Site "MySite"
             Assert-VerifiableMocks
         }
+
+       It "clobbers existing bindings when clear flag is set" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+                $Value.BindingInformation -notcontains "First Binding Information" -and $Value.Protocol -notcontains "protocol"
+            }
+
+            Set-TargetResource -Bindings @($secondBinding) -Clear $true -Site "MySite"
+            Assert-VerifiableMocks
+        }
     }
 
     Context "when ensure is absent" {
-        Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
-            $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
-            $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
-            $Value.BindingInformation -notcontains "Second Binding Information" -and $Value.Protocol -notcontains "another protocol"
-        }
+        It "preserves existing bindings while removing those specified by default" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+                    $Value.BindingInformation -contains "First Binding Information" -and $Value.Protocol -contains "protocol" -and
+                    $Value.BindingInformation -notcontains "Second Binding Information" -and $Value.Protocol -notcontains "another protocol"
+            }
 
-        It "preserves other existing bindings while removing those specified" {
             Set-TargetResource -Ensure "Absent" -Bindings @($secondBinding) -Site "MySite"
             Assert-VerifiableMocks
         }
+
+        It "removes all bindings when clear flag is set" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
+                $Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings" -and
+                    $Value.BindingInformation -notcontains "First Binding Information" -and $Value.Protocol -notcontains "protocol" -and
+                    $Value.BindingInformation -notcontains "Second Binding Information" -and $Value.Protocol -notcontains "another protocol"
+            }
+
+            Set-TargetResource -Ensure "Absent" -Bindings @($secondBinding) -Clear $true -Site "MySite"
+            Assert-VerifiableMocks
+        }
+
     }
 
     Context "when given a http binding" {
