@@ -9,10 +9,12 @@ Describe "Get-TargetResource" {
     $MockVirtualDirectory = New-Object PSObject -Property @{
         name = "MyVirtualDir"
         physicalPath = "C:\TargetDir"
+        count = 1
     }
-    $MockWebApplication = @(New-Object PSObject -Property @{
+    $MockWebApplication = New-Object PSObject -Property @{
         name = "MyApplication"
-    })
+        count = 1
+    }
 
     Context "when the virtual directory exists underneath a website" {        
         Mock Get-WebVirtualDirectory { $MockVirtualDirectory } -ParameterFilter {
@@ -23,7 +25,7 @@ Describe "Get-TargetResource" {
             $virtualDirectory = Get-TargetResource -Website "MySite" -Name "MyVirtualDir"
             $virtualDirectory.Ensure | Should Be "Present"
             $virtualDirectory.Website | Should Be "MySite"
-            $virtualDirectory.WebApplication | Should Be "MyApplication"
+            $virtualDirectory.WebApplication | Should Be ""
             $virtualDirectory.PhysicalPath | Should Be "C:\TargetDir"
             $virtualDirectory.Name | Should Be "MyVirtualDir"
         }
@@ -34,7 +36,7 @@ Describe "Get-TargetResource" {
             $Application -eq "MyApplication" -and $Site -eq "MySite" -and $Name -eq "MyVirtualDir"
         }
         Mock Get-WebApplication { $MockWebApplication } -ParameterFilter {
-            $Application -eq "MyApplication" -and $Site -eq "MySite"
+            $Name -eq "MyApplication" -and $Site -eq "MySite"
         }
 
         It "returns the virtual directory properties" {

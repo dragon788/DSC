@@ -162,14 +162,14 @@ function GetWebVirtualDirectoryInternal
         If ((CheckApplicationExists -Site $Site -Application $Application) -ne $true)
         {
             $compositeVirtualDirectoryName = GetCompositeVirtualDirectoryName -Name $Name -Application $Application
-            return Get-WebVirtualDirectory -site $Site -Name $compositeVirtualDirectoryName
+            return Get-WebVirtualDirectory -Site $Site -Name $compositeVirtualDirectoryName
         }
 
-        return Get-WebVirtualDirectory -site $Site -Application $Application -Name $Name
+        return Get-WebVirtualDirectory -Site $Site -Application $Application -Name $Name
     }
     else
     {
-        return Get-WebVirtualDirectory -site $Site -Name $Name
+        return Get-WebVirtualDirectory -Site $Site -Name $Name
     }
 }
 
