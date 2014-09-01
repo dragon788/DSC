@@ -65,10 +65,10 @@ function Set-TargetResource
         $Ensure = "Present"
     )
 
+    $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
+
     if ($Ensure -eq "Present")
     {
-        $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
-
         if ($virtualDirectory.count -eq 0)
         {
             Write-Verbose "Creating new Web Virtual Directory $Name."
@@ -81,7 +81,7 @@ function Set-TargetResource
         }
     }
 
-    if ($Ensure -eq "Absent")
+    if ($virtualDirectory.count -gt 0 -and $Ensure -eq "Absent")
     {
         Write-Verbose "Removing existing Virtual Directory $Name."
         Remove-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name
