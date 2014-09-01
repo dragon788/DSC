@@ -15,33 +15,29 @@ function Get-TargetResource
 
         [parameter(Mandatory = $true)]
         [System.String]
-        $Name,
-
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $PhysicalPath
+        $Name
     )
 
     $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
 
-    $PhysicalPath = ""
-    $Ensure = "Absent"
-
     if ($virtualDirectory.Count -eq 1)
     {
-        $PhysicalPath = $virtualDirectory.PhysicalPath
-        $Ensure = "Present"
+        return @{
+            Name = $Name
+            Website = $Website
+            WebApplication = $WebApplication
+            PhysicalPath = $virtualDirectory.PhysicalPath
+            Ensure = "Present"
+        }
     }
 
-    $returnValue = @{
+    return @{
         Name = $Name
         Website = $Website
         WebApplication = $WebApplication
-        PhysicalPath = $PhysicalPath
-        Ensure = $Ensure
+        PhysicalPath = ""
+        Ensure = "Absent"
     }
-
-    return $returnValue
 }
 
 function Set-TargetResource
