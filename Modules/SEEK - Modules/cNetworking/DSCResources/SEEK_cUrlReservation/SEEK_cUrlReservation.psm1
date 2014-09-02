@@ -18,7 +18,7 @@ function Get-TargetResource
     )
 
     $url = Get-Url $Protocol $Hostname $Port
-    $urlAclOutput = (Invoke-NetshUrlAcl -Protocol $Protocol -Action "show" -Url $url)
+    $urlAclOutput = (Invoke-NetshUrlAcl -Protocol $Protocol -Operation "show" -Url $url)
     $urlReservationExists = $urlAclOutput -match "User:\s(.+?)\s"
 
     if (!$urlReservationExists)
@@ -144,7 +144,7 @@ function New-UrlReservation
     )
 
     $url = Get-Url $Protocol $Hostname $Port
-    Invoke-NetshUrlAcl -Protocol $Protocol -Action "add" -Url $url -User $User
+    Invoke-NetshUrlAcl -Protocol $Protocol -Operation "add" -Url $url -User $User
 }
 
 function Remove-UrlReservation
@@ -166,7 +166,7 @@ function Remove-UrlReservation
     )
 
     $url = Get-Url $Protocol $Hostname $Port
-    Invoke-NetshUrlAcl -Protocol $Protocol -Action "del" -Url $url
+    Invoke-NetshUrlAcl -Protocol $Protocol -Operation "del" -Url $url
 }
 
 function Get-Url
@@ -202,7 +202,7 @@ function Invoke-NetshUrlAcl
 
         [parameter(Mandatory = $true)]
         [ValidateSet("add","del","show")]
-        [String]$Action,
+        [String]$Operation,
 
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -211,7 +211,7 @@ function Invoke-NetshUrlAcl
         [String]$User
     )
     $argumentList = @(
-        $Protocol, $Action, 'urlacl', 
+        $Protocol, $Operation, 'urlacl', 
         "url=""${Url}"""
     )
     if ($user)
@@ -220,7 +220,7 @@ function Invoke-NetshUrlAcl
     }
     $outputPath = "${env:TEMP}\netsh.out"
     $process = Start-Process netsh -ArgumentList $argumentList -Wait -NoNewWindow -RedirectStandardOutput $outputPath -Passthru
-    if ($process.ExitCode -ne 0) { write-verbose "Error"; throw "Error performing action=${Action} for reserved url"}
+    if ($process.ExitCode -ne 0) { throw "Error performing operation '${Operation}' for reserved url"}
     return ((Get-Content $outputPath) -join "`n")
 }
 
