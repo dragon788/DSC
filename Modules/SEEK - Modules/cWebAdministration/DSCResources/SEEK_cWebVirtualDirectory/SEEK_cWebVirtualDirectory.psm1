@@ -11,14 +11,15 @@ function Get-TargetResource
         $Website,
 
         [System.String]
-        $WebApplication = "",
+        $WebApplication = $null,
 
         [parameter(Mandatory = $true)]
         [System.String]
         $Name
     )
 
-    $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
+    $virtualDirectoryName = Get-VirtualDirectoryName -Site $Website -Name $Name -Application $WebApplication
+    $virtualDirectory = Get-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $virtualDirectoryName
 
     if ($virtualDirectory.Count -eq 1)
     {
@@ -35,7 +36,7 @@ function Get-TargetResource
         Name = $Name
         Website = $Website
         WebApplication = $WebApplication
-        PhysicalPath = ""
+        PhysicalPath = $null
         Ensure = "Absent"
     }
 }
@@ -50,7 +51,7 @@ function Set-TargetResource
         $Website,
 
         [System.String]
-        $WebApplication = "",
+        $WebApplication = $null,
 
         [parameter(Mandatory = $true)]
         [System.String]
@@ -65,11 +66,11 @@ function Set-TargetResource
         $Ensure = "Present"
     )
 
-    $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
+    $virtualDirectory = Get-TargetResource -Website $Website -Name $Name -WebApplication $WebApplication
 
     if ($Ensure -eq "Present")
     {
-        if ($virtualDirectory.count -eq 0)
+        if ($virtualDirectory.Ensure -eq "Absent")
         {
             Write-Verbose "Creating new Web Virtual Directory $Name."
             New-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name -PhysicalPath $PhysicalPath
@@ -81,7 +82,7 @@ function Set-TargetResource
         }
     }
 
-    if ($virtualDirectory.count -gt 0 -and $Ensure -eq "Absent")
+    if ($virtualDirectory.Ensure -eq "Present" -and $Ensure -eq "Absent")
     {
         Write-Verbose "Removing existing Virtual Directory $Name."
         Remove-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name
@@ -99,7 +100,7 @@ function Test-TargetResource
         $Website,
 
         [System.String]
-        $WebApplication = "",
+        $WebApplication = $null,
 
         [parameter(Mandatory = $true)]
         [System.String]
@@ -116,32 +117,28 @@ function Test-TargetResource
 
     Write-Verbose "Checking the virtual directories for the website."
 
-    $virtualDirectory = GetWebVirtualDirectoryInternal -Site $Website -Name $Name -Application $WebApplication
+    $virtualDirectory = Get-TargetResource -Website $Website -Name $Name -WebApplication $WebApplication
 
-    if ($virtualDirectory.count -eq 1 -and $Ensure -eq "Present")
-    {
-        if ($virtualDirectory.physicalPath -eq $PhysicalPath)
-        {
-            Write-Verbose "Web virtual directory is in required state"
-            return $true
-        }
-        else
-        {
-            Write-Verbose "Physical path $PhysicalPath for web virtual directory $Name does not match desired state."
-            return $false
-        }
-    }
-
-    if ($virtualDirectory.count -eq 0 -and $Ensure -eq "Absent")
+    if ($virtualDirectory.Ensure -eq "Absent" -and $Ensure -eq "Absent")
     {
         Write-Verbose "Web virtual direcotry $Name should be absent and is absent"
         return $true
     }
 
+    if ($virtualDirectory.Ensure -eq "Present" `
+        -and $Ensure -eq "Present" `
+        -and $virtualDirectory.physicalPath -eq $PhysicalPath)
+    {
+        Write-Verbose "Web virtual directory is in required state"
+        return $true
+    }
+
+    Write-Verbose "Web virtual directory $Name does not match desired state."
+
     return $false
 }
 
-function GetWebVirtualDirectoryInternal
+function Get-VirtualDirectoryName
 {
     param
     (
@@ -154,26 +151,20 @@ function GetWebVirtualDirectoryInternal
         $Site,
 
         [System.String]
-        $Application = ""
+        $Application = $null
     )
 
-    if ($Application -ne "")
-    {
-        If ((CheckApplicationExists -Site $Site -Application $Application) -ne $true)
-        {
-            $compositeVirtualDirectoryName = GetCompositeVirtualDirectoryName -Name $Name -Application $Application
-            return Get-WebVirtualDirectory -Site $Site -Name $compositeVirtualDirectoryName
-        }
+    $virtualDirectoryName = $Name
 
-        return Get-WebVirtualDirectory -Site $Site -Application $Application -Name $Name
-    }
-    else
+    if ($Application -and -not (Test-ApplicationExists -Site $Site -Application $Application))
     {
-        return Get-WebVirtualDirectory -Site $Site -Name $Name
+        $virtualDirectoryName = Get-CompositeVirtualDirectoryName -Name $Name -Application $Application
     }
+
+    return $virtualDirectoryName
 }
 
-function CheckApplicationExists
+function Test-ApplicationExists
 {
     param
     (
@@ -182,7 +173,7 @@ function CheckApplicationExists
         $Site,
 
         [System.String]
-        $Application = ""
+        $Application = $null
     )
     $WebApplication = Get-WebApplication -Site $Site -Name $Application
 
@@ -196,7 +187,7 @@ function CheckApplicationExists
     return $false
 }
 
-function GetCompositeVirtualDirectoryName
+function Get-CompositeVirtualDirectoryName
 {
     param
     (

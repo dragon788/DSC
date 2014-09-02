@@ -25,7 +25,7 @@ Describe "Get-TargetResource" {
             $virtualDirectory = Get-TargetResource -Website "MySite" -Name "MyVirtualDir"
             $virtualDirectory.Ensure | Should Be "Present"
             $virtualDirectory.Website | Should Be "MySite"
-            $virtualDirectory.WebApplication | Should Be ""
+            $virtualDirectory.WebApplication | Should BeNullOrEmpty
             $virtualDirectory.PhysicalPath | Should Be "C:\TargetDir"
             $virtualDirectory.Name | Should Be "MyVirtualDir"
         }
@@ -70,7 +70,7 @@ Describe "Get-TargetResource" {
             $virtualDirectory.Ensure | Should Be "Absent"
             $virtualDirectory.Website | Should Be "MySite"
             $virtualDirectory.WebApplication | Should Be "MyApplication"
-            $virtualDirectory.PhysicalPath | Should Be ""
+            $virtualDirectory.PhysicalPath | Should BeNullOrEmpty
             $virtualDirectory.Name | Should Be "MyVirtualDir"
         }
     }
@@ -185,7 +185,7 @@ Describe "Set-TargetResource" {
 
         It "removes the virtual directory" {
             Mock Remove-WebVirtualDirectory -Verifiable -ParameterFilter {
-                $Site -eq "MySite" -and $Application -eq "" -and $Name -eq "MyVirtualDir"
+                $Site -eq "MySite" -and !$Application -and $Name -eq "MyVirtualDir"
             }
             Set-TargetResource -Website "MySite" `
                 -Ensure "Absent" `
