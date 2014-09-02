@@ -1,5 +1,7 @@
 Import-Module WebAdministration
 
+$LogonMethodEnum = @("Batch","Interactive","Network","ClearText")
+
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -18,16 +20,19 @@ function Get-TargetResource
         $Name
     )
 
-    $virtualDirectoryName = Get-VirtualDirectoryName -Site $Website -Name $Name -Application $WebApplication
-    $virtualDirectory = Get-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $virtualDirectoryName
+    $virtualDirectoryPath = Get-VirtualDirectoryPath -Site $Website -Name $Name -Application $WebApplication
 
-    if ($virtualDirectory.Count -eq 1)
+    if (Test-Path $virtualDirectoryPath)
     {
+        $virtualDirectory = Get-Item -Path $virtualDirectoryPath
         return @{
             Name = $Name
             Website = $Website
             WebApplication = $WebApplication
             PhysicalPath = $virtualDirectory.PhysicalPath
+            LogonMethod = $virtualDirectory.logonMethod
+            Username = $virtualDirectory.username
+            Password = $virtualDirectory.password
             Ensure = "Present"
         }
     }
@@ -37,6 +42,9 @@ function Get-TargetResource
         Website = $Website
         WebApplication = $WebApplication
         PhysicalPath = $null
+        LogonMethod = $null
+        Username = $null
+        Password = $null
         Ensure = "Absent"
     }
 }
@@ -61,6 +69,17 @@ function Set-TargetResource
         [System.String]
         $PhysicalPath,
 
+        [ValidateSet("Batch","Interactive","Network","ClearText")]
+        [System.String]
+        $LogonMethod = "ClearText",
+
+        [System.String]
+        $Username = "",
+
+        [System.String]
+        $Password = "",
+
+
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure = "Present"
@@ -70,6 +89,8 @@ function Set-TargetResource
 
     if ($Ensure -eq "Present")
     {
+        $path = Get-VirtualDirectoryPath -Site $Website -Application $WebApplication -Name $Name
+
         if ($virtualDirectory.Ensure -eq "Absent")
         {
             Write-Verbose "Creating new Web Virtual Directory $Name."
@@ -78,8 +99,11 @@ function Set-TargetResource
         else
         {
             Write-Verbose "Updating physical path for web virtual directory $Name."
-            Set-ItemProperty -Path IIS:Sites\$Website\$WebApplication\$Name -Name physicalPath -Value $PhysicalPath
+            Set-ItemProperty -Path $path -Name physicalPath -Value $PhysicalPath
         }
+        Set-ItemProperty -Path $path -Name logonMethod -Value $LogonMethodEnum.IndexOf($LogonMethod)
+        Set-ItemProperty -Path $path -Name username -Value $Username
+        Set-ItemProperty -Path $path -Name password -Value $Password
     }
 
     if ($virtualDirectory.Ensure -eq "Present" -and $Ensure -eq "Absent")
@@ -110,6 +134,16 @@ function Test-TargetResource
         [System.String]
         $PhysicalPath,
 
+        [ValidateSet("ClearText","Network","Interactive","Batch")]
+        [System.String]
+        $LogonMethod = "ClearText",
+
+        [System.String]
+        $Username = "",
+
+        [System.String]
+        $Password = "",
+
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure = "Present"
@@ -127,7 +161,10 @@ function Test-TargetResource
 
     if ($virtualDirectory.Ensure -eq "Present" `
         -and $Ensure -eq "Present" `
-        -and $virtualDirectory.physicalPath -eq $PhysicalPath)
+        -and $virtualDirectory.physicalPath -eq $PhysicalPath `
+        -and $virtualDirectory.logonMethod -eq $LogonMethod `
+        -and $virtualDirectory.username -eq $Username `
+        -and $virtualDirectory.password -eq $Password)
     {
         Write-Verbose "Web virtual directory is in required state"
         return $true
@@ -138,7 +175,7 @@ function Test-TargetResource
     return $false
 }
 
-function Get-VirtualDirectoryName
+function Get-VirtualDirectoryPath
 {
     param
     (
@@ -154,53 +191,12 @@ function Get-VirtualDirectoryName
         $Application = $null
     )
 
-    $virtualDirectoryName = $Name
-
-    if ($Application -and -not (Test-ApplicationExists -Site $Site -Application $Application))
+    if (-not $Application)
     {
-        $virtualDirectoryName = Get-CompositeVirtualDirectoryName -Name $Name -Application $Application
+        return "IIS:\Sites\${Site}\${Name}"
     }
 
-    return $virtualDirectoryName
-}
-
-function Test-ApplicationExists
-{
-    param
-    (
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $Site,
-
-        [System.String]
-        $Application = $null
-    )
-    $WebApplication = Get-WebApplication -Site $Site -Name $Application
-
-    if ($WebApplication.count -eq 1)
-    {
-        return $true
-    }
-
-    Write-Warning "Specified Web Application $Application does not exist."
-
-    return $false
-}
-
-function Get-CompositeVirtualDirectoryName
-{
-    param
-    (
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $Name,
-
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $Application
-    )
-
-    return "$Application/$Name"
+    return "IIS:\Sites\${Site}\${Application}\${Name}"
 }
 
 Export-ModuleMember -Function *-TargetResource
