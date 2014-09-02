@@ -214,10 +214,10 @@ function Invoke-NetshUrlAcl
         $Protocol, $Action, 'urlacl', 
         "url=""${Url}"""
     )
-    <#if ($user)
+    if ($user)
     {
         $argumentList += "user=""${User}"""
-    }#>
+    }
     $outputPath = "${env:TEMP}\netsh.out"
     $process = Start-Process netsh -ArgumentList $argumentList -Wait -NoNewWindow -RedirectStandardOutput $outputPath -Passthru
     if ($process.ExitCode -ne 0) { write-verbose "Error"; throw "Error performing action=${Action} for reserved url"}
