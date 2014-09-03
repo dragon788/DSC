@@ -1,4 +1,4 @@
-$module = Join-Path $PSScriptRoot "..\..\..\Modules\Seek - Modules\cNServiceBus\DSCResources\SEEK_cNServiceBusHost\SEEK_cNServiceBusHost.psm1"
+$module = Join-Path $PSScriptRoot "..\..\..\Modules\cNServiceBus\DSCResources\SEEK_cNServiceBusHost\SEEK_cNServiceBusHost.psm1"
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 

@@ -1,4 +1,4 @@
-$module = Join-Path $PSScriptRoot "..\..\..\Modules\Seek - Modules\cMessageQueue\DSCResources\SEEK_cPrivateMsmqQueuePermissions\SEEK_cPrivateMsmqQueuePermissions.psm1"
+$module = Join-Path $PSScriptRoot "..\..\..\Modules\cMessageQueue\DSCResources\SEEK_cPrivateMsmqQueuePermissions\SEEK_cPrivateMsmqQueuePermissions.psm1"
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 

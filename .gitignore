@@ -1,5 +1,6 @@
 Test.xml
 tmp
+Output/**
 Packages/**
 !Packages/packages.config
 !Packages/NuGet.CommandLine*
