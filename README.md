@@ -75,7 +75,7 @@ PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/insta
 ```
 - Install Pester package
 ```
-PS> choco install pester -Version 2.1.0
+PS> choco install .\packages.config
 ```
 
 ##### Installing Pester in a custom location
@@ -121,7 +121,7 @@ Itegration tests are not absolutely necessary. They are however useful to get so
 Run the integration tests using the following command:
 
 ```
-.\build.bat /t:\TntegrationTest
+.\build.bat /t:\IntegrationTest
 ```
 
 #### E2E tests:
