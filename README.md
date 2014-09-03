@@ -88,7 +88,7 @@ Itegration tests are not absolutely necessary. They are however useful to get so
 Run the integration tests using the following command:
 
 ```
-.\build.ps1 TntegrationTest
+.\build.ps1 IntegrationTest
 ```
 
 #### E2E tests:
