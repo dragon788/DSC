@@ -59,47 +59,14 @@ If you wish to contribute to the SEEK DSC resources, please ensure you run the t
 ### Test Dependencies
 
 - [.Net Framework 4](http://www.microsoft.com/en-au/download/details.aspx?id=17718) required to run build
-- [Pester](https://github.com/pester/Pester) required to run tests
 
-
-#### Installing Pester
-
-The Pester project can be downloaded from GitHub as a [ZIP](https://github.com/pester/Pester/archive/master.zip), cloned using [Git](https://github.com/pester/Pester.git) or installed as a [Chocolatey package](http://chocolatey.org/packages/poshgit). By default, the build expects Pester to be installed using Chocolatey. If you have installed pester manually, you can set the `PESTER_HOME` environment variable with the install location.
-
-##### Installing Pester Chocolatey Package
-
-- Install Chocolatey
-```
-PS> Set-ExecutionPolicy RemoteSigned
-PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
-```
-- Install Pester package
-```
-PS> choco install pester -Version 2.1.0
-```
-
-##### Installing Pester in a custom location
-
-Assuming you want to install Pester into a custom location (e.g. `D:\Tools\Pester`)
-
-- Clone the Git repository:
-```
-PS> mkdir D:\Tools
-PS> cd D:\Tools
-PS> git clone https://github.com/pester/Pester.git
-```
-- Set the `PESTER_HOME` user-level environment variable:
-```
-PS> [Environment]::SetEnvironmentVariable("PESTER_HOME", "D:\Tools\Pester", "User")
-```
-- Close the current PowerShell console
 
 ### Test suite:
 
 The following command will run the full suite of tests:
 
 ```
-.\build.bat /t:Test
+.\build.ps1 TestAll
 ```
 
 #### Unit tests:
@@ -111,7 +78,7 @@ NOTE: if cmdlets cannot be mocked directly, it is acceptable to partially mock t
 To run just the unit tests, use the following command:
 
 ```
-.\build.bat /t:UnitTest
+.\build.ps1 UnitTest
 ```
 
 #### Integration tests:
@@ -121,7 +88,7 @@ Itegration tests are not absolutely necessary. They are however useful to get so
 Run the integration tests using the following command:
 
 ```
-.\build.bat /t:\TntegrationTest
+.\build.ps1 TntegrationTest
 ```
 
 #### E2E tests:
@@ -131,5 +98,5 @@ Each module should have one end-to-end test. This ensures that a DSC configurati
 To run the E2E tests, run the following command:
 
 ```
-.\build.bat /t:E2ETest
+.\build.ps1 E2ETest
 ```
