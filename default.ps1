@@ -14,7 +14,7 @@ properties {
 
 task default -depends Clean, UnitTest, IntegrationTest
 
-task Package -depends UnitTest, IntegrationTest {
+task Package -depends Clean, UnitTest, IntegrationTest {
   if ($buildNumber) {
     $version = "${version}.${buildNumber}"
   }
@@ -51,7 +51,7 @@ task Install -depends Package {
   exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) }
 }
 
-task Reinstall -depends Package {
+task Reinstall {
   exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) -force }
 }
 
