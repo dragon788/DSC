@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>seek-dsc-messagequeue</id>
+    <title>SEEK DSC MessageQueue</title>
+    <version>0.0.0.1</version>
+    <authors>SEEK</authors>
+    <owners>SEEK</owners>
+    <description>Custom DSC Resources</description>
+    <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
+    <tags>admin DSC</tags>
+    <copyright>© SEEK 2014. All rights reserved.</copyright>
+    <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <releaseNotes></releaseNotes>
+  </metadata>
+  <files>
+    <file src="**" target="lib\cMessageQueue" exclude="*.nuspec"/>
+    <file src="..\..\..\Tools\**" target="tools" />
+  </files>
+</package>

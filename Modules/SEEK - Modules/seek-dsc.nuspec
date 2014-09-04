@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>seek-dsc</id>
+    <title>SEEK DSC Resources</title>
+    <version>0.0.0.1</version>
+    <authors>SEEK</authors>
+    <owners>SEEK</owners>
+    <description>Custom DSC Resources</description>
+    <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
+    <tags>admin DSC</tags>
+    <copyright>© SEEK 2014. All rights reserved.</copyright>
+    <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <releaseNotes></releaseNotes>
+    <dependencies>
+      <dependency id="seek-dsc-harddisk"/>
+      <dependency id="seek-dsc-networking"/>
+      <dependency id="seek-dsc-messagequeue"/>
+      <dependency id="seek-dsc-nservicebus"/>
+      <dependency id="seek-dsc-software"/>
+      <dependency id="seek-dsc-webadministration"/>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="*" exclude="**"/>
+  </files>
+</package>

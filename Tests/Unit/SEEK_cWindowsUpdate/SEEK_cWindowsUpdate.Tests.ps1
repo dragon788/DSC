@@ -1,4 +1,4 @@
-$module = Join-Path $PSScriptRoot "..\..\..\Modules\Seek - Modules\cSoftware\DSCResources\SEEK_cWindowsUpdate\SEEK_cWindowsUpdate.psm1"
+$module = Join-Path $PSScriptRoot "..\..\..\Modules\SEEK - Modules\cSoftware\DSCResources\SEEK_cWindowsUpdate\SEEK_cWindowsUpdate.psm1"
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 
