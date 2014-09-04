@@ -8,17 +8,22 @@ properties {
   $outputPackageDir = "${outputDir}\Packages"
   $modulesDir = ".\Modules\SEEK - Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
+  $version = "1.0.0"
+  $buildNumber = $null
 }
 
 task default -depends Clean, UnitTest, IntegrationTest
 
 task Package -depends UnitTest, IntegrationTest {
+  if ($buildNumber) {
+    $version = "${version}.${buildNumber}"
+  }
   if (-not (Test-Path $outputPackageDir)) {
     New-Item -ItemType directory -Path $outputPackageDir
   }
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
-    exec { & $chocolatey pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir)" }
+    exec { & $chocolatey pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
 }
 
@@ -51,9 +56,8 @@ task Reinstall -depends Package {
 }
 
 task Uninstall {
-  Get-ChildItem *.nuspec -Recurse | Foreach-Object {
-    & $chocolatey uninstall $_.Basename
-  }
+  $packageNames = Get-ChildItem *.nuspec -Recurse | Foreach-Object { $_.Basename }
+  & $chocolatey uninstall @packageNames
 }
 
 task UnitTest {
