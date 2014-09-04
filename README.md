@@ -12,11 +12,10 @@ The PowerShell DSC configuration is applied by the Local Configuration Manager (
 
 ### Pre-requisites
 
-- Git client
-- This project must be cloned to the local machine
+- Chocolatey
 
 ```
-PS> git clone https://github.com/SEEK-Jobs/DSC.git
+PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
 ```
 
 #### Runtime Dependencies
@@ -27,25 +26,16 @@ PS> git clone https://github.com/SEEK-Jobs/DSC.git
 
 ### Installation
 
-Simply run the setup script from the project (as administrator):
+Simply install the chocolatey package (as administrator):
 
 ```
-PS> cd DSC
-PS> .\Setup.ps1
+PS> choco install seek-dsc
 ```
 
 You should now see some modules in the PowerShell Module path. For example:
 
 ```
-PS> ls $env:ProgramFiles\WindowsPowerShell\modules
-
-
-    Directory: C:\Program Files\WindowsPowerShell\Modules
-
-
-Mode                LastWriteTime     Length Name
-----                -------------     ------ ----
-d----        26/05/2014   3:57 PM            SEEK - Modules
+PS> ls $env:ProgramFiles\WindowsPowerShell\Modules
 ```
 
 ## Creating Custom DSC Resources

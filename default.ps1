@@ -2,10 +2,11 @@ properties {
 	$pesterHome = ".\Packages\Pester.2.1.0\tools"
 	$pester = "${pesterHome}\bin\pester.bat"
 	$chocolateyHome = ".\Packages\chocolatey.0.9.8.27\tools\chocolateyInstall"
-	$chocolatey = "${chocolateyHome}\chocolatey.cmd"
+	$chocolatey = "${chocolateyHome}\chocolatey.ps1"
     $testOutput = ".\Test.xml"
     $outputDir = ".\Output"
-    $outputPackageDir = $(Resolve-Path "${outputDir}\Packages")
+    $outputPackageDir = "${outputDir}\Packages"
+    $modulesDir = ".\Modules\SEEK - Modules"
 }
 
 task default -depends Clean, UnitTest, IntegrationTest
@@ -15,18 +16,17 @@ task Package -depends UnitTest, IntegrationTest {
 		New-Item -ItemType directory -Path $outputPackageDir
 	}
 	Get-ChildItem *.nuspec -Recurse | Foreach-Object {
-		exec { & $chocolatey pack "$($_.FullName) -OutputDir $outputPackageDir" }
+		# chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument 
+		exec { & $chocolatey pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir)" }
 	}
 }
 
 task Install -depends Package {
-	$packageNames = (Get-ChildItem .\Modules | ForEach-Object { $_.Name }) -join ' '
-	exec { & $chocolatey install cHardDisk cMessageQueue cNetworking cNServiceBus cSoftware cWebAdministration -source $outputPackageDir }
+	exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) }
 }
 
 task Uninstall {
-	$packageNames = (Get-ChildItem .\Modules | ForEach-Object { $_.Name }) -join ' '
-	exec { & $chocolatey uninstall cHardDisk cMessageQueue cNetworking cNServiceBus cSoftware cWebAdministration }
+	exec { & $chocolatey uninstall seek-dsc -source $(Resolve-Path $outputPackageDir) }
 }
 
 task UnitTest {
