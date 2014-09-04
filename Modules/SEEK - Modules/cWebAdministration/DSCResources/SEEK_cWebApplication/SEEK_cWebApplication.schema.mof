@@ -1,4 +1,4 @@
-[ClassVersion("1.0.1")]
+[ClassVersion("1.0.0")]
 Class SEEK_cWebAuthenticationInformation
 {
     [write,ValueMap{"true", "false"},Values{"true", "false"}]string Anonymous;

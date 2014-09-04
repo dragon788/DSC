@@ -1,6 +1,6 @@
 @{
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '0.0.0.1'
 
 # ID used to uniquely identify this module
 GUID = '6dd79cc0-a617-4b81-8281-ace0721e1f53'
@@ -15,7 +15,7 @@ CompanyName = 'SEEK Ltd.'
 Copyright = '(c) 2014 SEEK Ltd. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'SEEK Module with DSC Resources for Networking Administration'
+Description = 'Custom DSC Resources for networking administration'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '4.0'

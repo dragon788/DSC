@@ -1,6 +1,6 @@
 @{
 # Version number of this module.
-ModuleVersion = '1.0.1'
+ModuleVersion = '0.0.0.1'
 
 # ID used to uniquely identify this module
 GUID = 'f16bb534-c4e4-4887-b07d-4895a019c61d'
@@ -15,7 +15,7 @@ CompanyName = 'SEEK Ltd.'
 Copyright = '(c) 2014 SEEK Ltd. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'SEEK Module with DSC Resources for Web Administration'
+Description = 'DSC Resources for managing resources residing on the hard disk'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '4.0'

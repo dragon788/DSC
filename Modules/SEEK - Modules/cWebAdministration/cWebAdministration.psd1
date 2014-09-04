@@ -1,6 +1,6 @@
 @{
 # Version number of this module.
-ModuleVersion = '1.0.1'
+ModuleVersion = '0.0.0.1'
 
 # ID used to uniquely identify this module
 GUID = '5b4f047a-7fca-48f1-81a6-5c4a85fb6cf2'
@@ -15,7 +15,7 @@ CompanyName = 'SEEK Ltd.'
 Copyright = '(c) 2014 SEEK Ltd. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'SEEK Module with DSC Resources for Web Administration'
+Description = 'Custom DSC Resources for administration of an IIS web server'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '4.0'

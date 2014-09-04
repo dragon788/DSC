@@ -1,4 +1,4 @@
-[ClassVersion("1.0"), FriendlyName("cWindowsUpdate")]
+[ClassVersion("1.0.0"), FriendlyName("cWindowsUpdate")]
 class SEEK_cWindowsUpdate : OMI_BaseResource
 {
     [Key, Description("Fully qualified path or URL of the MSU file")] String Update;

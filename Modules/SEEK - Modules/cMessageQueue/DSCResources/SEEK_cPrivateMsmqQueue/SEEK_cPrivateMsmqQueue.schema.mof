@@ -1,5 +1,4 @@
-
-[ClassVersion("1.0"), FriendlyName("cPrivateMsmqQueue")]
+[ClassVersion("1.0.0"), FriendlyName("cPrivateMsmqQueue")]
 class SEEK_cPrivateMsmqQueue : OMI_BaseResource
 {
     [Key, Description("Name of the queue")] String Name;

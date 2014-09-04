@@ -4,9 +4,9 @@
     <id>seek-dsc-software</id>
     <title>SEEK DSC Software</title>
     <version>0.0.0.1</version>
-    <authors>SEEK</authors>
-    <owners>SEEK</owners>
-    <description>Custom DSC Resources</description>
+    <authors>SEEK Ltd.</authors>
+    <owners>SEEK Ltd.</owners>
+    <description>Custom DSC Resources for installing and uninstalling software packages and updates</description>
     <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
     <tags>admin DSC</tags>
     <copyright>© SEEK 2014. All rights reserved.</copyright>

@@ -4,12 +4,12 @@
     <id>seek-dsc-harddisk</id>
     <title>SEEK DSC HardDisk</title>
     <version>0.0.0.1</version>
-    <authors>SEEK</authors>
-    <owners>SEEK</owners>
-    <description>Custom DSC Resources</description>
+    <authors>SEEK Ltd.</authors>
+    <owners>SEEK Ltd.</owners>
+    <description>Custom DSC Resources for managing resources residing on the hard disk</description>
     <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
     <tags>admin DSC</tags>
-    <copyright>© SEEK 2014. All rights reserved.</copyright>
+    <copyright>© 2014 SEEK Ltd. All rights reserved.</copyright>
     <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes></releaseNotes>

@@ -1,6 +1,6 @@
 @{
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '0.0.0.1'
 
 # ID used to uniquely identify this module
 GUID = '9a8df25f-098f-400c-a8e4-1cf313364a01'
@@ -15,7 +15,7 @@ CompanyName = 'SEEK Ltd.'
 Copyright = '(c) 2014 SEEK Ltd. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'SEEK Module with DSC Resources for Message Queue Administration'
+Description = 'Custom DSC Resources for message queue administration'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '4.0'
