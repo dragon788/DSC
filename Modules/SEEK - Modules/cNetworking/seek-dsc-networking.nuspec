@@ -15,7 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" target="lib\cNetworking" exclude="*.nuspec"/>
+    <file src="**" target="lib\cNetworking" exclude="*.nuspec;cNetworking.psd1"/>
     <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cNetworking.psd1" target="lib\cNetworking" />
   </files>
 </package>

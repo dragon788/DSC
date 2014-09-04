@@ -6,6 +6,7 @@ properties {
   $testOutput = ".\Test.xml"
   $outputDir = ".\Output"
   $outputPackageDir = "${outputDir}\Packages"
+  $outputModuleManifestDir = "${outputDir}\ModuleManifests"
   $modulesDir = ".\Modules\SEEK - Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
   $version = "1.0.0"
@@ -22,6 +23,7 @@ task Package -depends Clean, UnitTest, IntegrationTest {
     New-Item -ItemType directory -Path $outputPackageDir
   }
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
+    Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
     exec { & $chocolatey pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
@@ -102,5 +104,27 @@ function Invoke-Tests {
   }
   else {
     exec { & $pester -Path $Path }
+  }
+}
+
+function Update-ModuleManifestVersion {
+  param (
+    [parameter(Mandatory = $true)]
+    [string]$Path,
+
+    [parameter(Mandatory = $true)]
+    [string]$OutputDir,
+
+    [parameter(Mandatory = $true)]
+    [string]$Version
+  )
+
+  if (-not (Test-Path $OutputDir)) {
+    New-Item -ItemType directory -Path $OutputDir
+  }
+
+  Get-ChildItem -Path $Path -Filter *.psd1 | Foreach-Object {
+    $updatedModuleManifestPath = "${OutputDir}\$($_.Name)"
+    (Get-Content($_.FullName)) | ForEach-Object {$_ -replace "ModuleVersion\s+=\s+'[\d\.]+'", "ModuleVersion = '$Version'"} | Set-Content($updatedModuleManifestPath)
   }
 }
