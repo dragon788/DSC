@@ -46,8 +46,14 @@ task Install -depends Package {
   exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) }
 }
 
+task Reinstall -depends Package {
+  exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) -force }
+}
+
 task Uninstall {
-  exec { & $chocolatey uninstall seek-dsc -source $(Resolve-Path $outputPackageDir) }
+  Get-ChildItem *.nuspec -Recurse | Foreach-Object {
+    & $chocolatey uninstall $_.Basename
+  }
 }
 
 task UnitTest {
