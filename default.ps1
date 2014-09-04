@@ -12,7 +12,7 @@ properties {
 
 task default -depends Clean, UnitTest, IntegrationTest
 
-task Package <#-depends UnitTest, IntegrationTest#> {
+task Package -depends UnitTest, IntegrationTest {
   if (-not (Test-Path $outputPackageDir)) {
     New-Item -ItemType directory -Path $outputPackageDir
   }
