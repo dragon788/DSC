@@ -14,7 +14,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes></releaseNotes>
     <dependencies>
-    <dependency id="seek-dsc-harddisk"/>
+      <dependency id="seek-dsc-harddisk"/>
       <dependency id="seek-dsc-networking"/>
       <dependency id="seek-dsc-messagequeue"/>
       <dependency id="seek-dsc-nservicebus"/>
@@ -22,4 +22,7 @@
       <dependency id="seek-dsc-webadministration"/>
     </dependencies>
   </metadata>
+  <files>
+    <file src="*" exclude="**"/>
+  </files>
 </package>
