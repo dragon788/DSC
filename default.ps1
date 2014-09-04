@@ -12,7 +12,7 @@ properties {
 
 task default -depends Clean, UnitTest, IntegrationTest
 
-task Package -depends UnitTest, IntegrationTest {
+task Package <#-depends UnitTest, IntegrationTest#> {
   if (-not (Test-Path $outputPackageDir)) {
     New-Item -ItemType directory -Path $outputPackageDir
   }
@@ -27,7 +27,7 @@ task EnableDeveloperMode {
     $linkPath = "$dscResourcesRoot\$($_.Name)"
     $targePath = $_.FullName
     if (Test-Path $linkPath) {
-      Remove-Item $linkPath -Recurse -Force
+      cmd /c rmdir $linkPath
     }
     cmd /c mklink /j $linkPath $targePath
   }
@@ -35,9 +35,9 @@ task EnableDeveloperMode {
 
 task DisableDeveloperMode {
   Get-ChildItem $modulesDir -attributes Directory | Foreach-Object {
-    $linkPath = "$dscResourcesRoot\$($_.Name)"
+    $linkPath = Resolve-Path "$dscResourcesRoot\$($_.Name)"
     if (Test-Path $linkPath) {
-      Remove-Item $linkPath -Recurse -Force
+      cmd /c rmdir $linkPath
     }
   }
 }
