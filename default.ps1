@@ -10,10 +10,10 @@ properties {
   $modulesDir = ".\Modules\SEEK - Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
   $version = "1.0.0"
-  $buildNumber = $null
+  $buildNumber = $env:BUILD_NUMBER
 }
 
-task default -depends Clean, UnitTest, IntegrationTest
+task default -depends Clean, UnitTest
 
 task Package -depends Clean {
   if ($buildNumber) {
