@@ -18,6 +18,7 @@ The PowerShell DSC configuration is applied by the Local Configuration Manager (
 PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
 ```
 
+
 #### Runtime Dependencies
 
 - [Windows Management Framework 4.0](http://www.microsoft.com/en-au/download/details.aspx?id=40855) required to provide PowerShell 4 and necessary cmdlets
