@@ -48,6 +48,21 @@ PS> ls $env:ProgramFiles\WindowsPowerShell\Modules
 
 Please see the Writing a Custom DSC Resource chapter in [The DSC book](http://powershell.org/wp/ebooks/).
 
+
+## Development Environment
+
+To get quick feedback you can put the DSC source code directly on the PSModulePath. The following task does this for you:
+
+```
+.\build.ps1 EnableDeveloperMode
+```
+
+To remove the DSC source from the PSModulePath, run the following task:
+
+```
+.\build.ps1 DisableDeveloperMode
+```
+
 ## Testing
 
 If you wish to contribute to the SEEK DSC resources, please ensure you run the tests before sending a pull request. Tests are run using [Pester](https://github.com/pester/Pester) (a BDD test framework for PowerShell). Pester tests can be found under the `Tests` directory.
