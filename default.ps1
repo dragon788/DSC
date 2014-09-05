@@ -15,7 +15,7 @@ properties {
 
 task default -depends Clean, UnitTest, IntegrationTest
 
-task Package -depends Clean, UnitTest, IntegrationTest {
+task Package -depends Clean {
   if ($buildNumber) {
     $version = "${version}.${buildNumber}"
   }
