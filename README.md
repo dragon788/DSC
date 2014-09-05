@@ -18,6 +18,11 @@ The PowerShell DSC configuration is applied by the Local Configuration Manager (
 PS> iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
 ```
 
+If you are behind a HTTP proxy you may need to run the following command before installing chocolatey.
+
+```
+PS> [net.webrequest]::defaultwebproxy.credentials = [net.credentialcache]::defaultcredentials
+```
 
 #### Runtime Dependencies
 
