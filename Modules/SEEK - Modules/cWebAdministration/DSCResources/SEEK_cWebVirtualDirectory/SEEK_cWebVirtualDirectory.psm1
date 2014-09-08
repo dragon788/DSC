@@ -20,10 +20,9 @@ function Get-TargetResource
         $Name
     )
 
-    $virtualDirectoryPath = Get-VirtualDirectoryPath -Site $Website -Name $Name -Application $WebApplication
-
-    if (Test-Path $virtualDirectoryPath)
+    if (test-VirtualDirectoryExists $WebSite $Name $WebApplication)
     {
+        $virtualDirectoryPath = Get-VirtualDirectoryPath -Site $Website -Name $Name -Application $WebApplication
         $virtualDirectory = Get-Item -Path $virtualDirectoryPath
         return @{
             Name = $Name
@@ -197,6 +196,24 @@ function Get-VirtualDirectoryPath
     }
 
     return "IIS:\Sites\${Site}\${Application}\${Name}"
+}
+
+function test-VirtualDirectoryExists
+{
+    param
+    (
+        [System.String] $Website,
+        [System.String] $Name,
+        [System.String] $WebApplication
+    )
+
+    $virtualDirectoryPath = Get-VirtualDirectoryPath -Site $Website -Name $Name -Application $WebApplication
+
+    if(-not (Test-Path $virtualDirectoryPath)) { return $false}
+
+    $virtualDirectory = Get-Item -Path $virtualDirectoryPath
+
+    $virtualDirectory.PhysicalPath -ne $null
 }
 
 Export-ModuleMember -Function *-TargetResource

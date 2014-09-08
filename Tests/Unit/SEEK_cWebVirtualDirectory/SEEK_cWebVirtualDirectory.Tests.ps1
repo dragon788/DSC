@@ -61,7 +61,7 @@ Describe "Get-TargetResource" {
         }
     }
 
-    Context "when the virtual directory does not exist" {
+    Context "when the virtual directory path does not exist" {
         Mock Test-Path { $false }
         It "returns an absent hashtable" {
             $virtualDirectory = Get-TargetResource -Website "MySite" -WebApplication "MyApplication" -Name "MyVirtualDir"
@@ -74,6 +74,30 @@ Describe "Get-TargetResource" {
             $virtualDirectory.Password | Should BeNullOrEmpty
         }
     }
+
+    Context "when the virtual directory path exists, but is not a virtual directory" {
+        Mock Test-Path { $true }
+
+        $MockVirtualDirectory = New-Object PSObject -Property @{
+            name = "MyVirtualDir"
+        }
+
+        Mock Get-Item { $MockVirtualDirectory } -ParameterFilter {
+            $Path -eq "IIS:\Sites\MySite\MyVirtualDir"
+        }
+
+        It "returns an absent hashtable" {
+            $virtualDirectory = Get-TargetResource -Website "MySite" -WebApplication "MyApplication" -Name "MyVirtualDir"
+            $virtualDirectory.Ensure | Should Be "Absent"
+            $virtualDirectory.Website | Should Be "MySite"
+            $virtualDirectory.WebApplication | Should Be "MyApplication"
+            $virtualDirectory.Name | Should Be "MyVirtualDir"
+            $virtualDirectory.LogonMethod | Should BeNullOrEmpty
+            $virtualDirectory.Username | Should BeNullOrEmpty
+            $virtualDirectory.Password | Should BeNullOrEmpty
+        }
+    }
+
 }
 
 Describe "Test-TargetResource" {
