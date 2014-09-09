@@ -13,5 +13,6 @@ try
 	Write-ChocolateySuccess 'SEEK PowerShell DSC Resources'
 } catch {
 	Write-ChocolateyFailure 'SEEK PowerShell DSC Resources' $($_.Exception.Message)
+	$host.SetShouldExit(1)
 	throw $_
 }
