@@ -2,6 +2,8 @@
 
 This project includes custom DSC resources used by SEEK Ltd.
 
+[![Build status](https://ci.appveyor.com/api/projects/status/wu5ax0vfkwyqij0p)](https://ci.appveyor.com/project/warnergodfrey/dsc)
+
 ## Setup
 
 After cloning this repository, it is necessary to perform a once-off setup. The setup will setup symlinks in the PowerShell Module path to the custom DSC resources.
