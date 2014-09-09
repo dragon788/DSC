@@ -1,29 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>seek-dsc</id>
-    <title>SEEK DSC Resources</title>
+    <id>seek-dsc-topshelf</id>
+    <title>SEEK DSC TopShelf</title>
     <version>0.0.0.1</version>
     <authors>SEEK Ltd.</authors>
     <owners>SEEK Ltd.</owners>
-    <description>Custom DSC Resources</description>
+    <description>Custom DSC Resources for managing TopShelf services</description>
     <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
     <tags>admin DSC</tags>
     <copyright>© 2014 SEEK Ltd. All rights reserved.</copyright>
     <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes></releaseNotes>
-    <dependencies>
-      <dependency id="seek-dsc-harddisk"/>
-      <dependency id="seek-dsc-networking"/>
-      <dependency id="seek-dsc-messagequeue"/>
-      <dependency id="seek-dsc-nservicebus"/>
-      <dependency id="seek-dsc-software"/>
-      <dependency id="seek-dsc-topshelf"/>
-      <dependency id="seek-dsc-webadministration"/>
-    </dependencies>
   </metadata>
   <files>
-    <file src="*" exclude="**"/>
+    <file src="**" target="lib\cTopShelf" exclude="*.nuspec;cTopShelf.psd1"/>
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cTopShelf.psd1" target="lib\cTopShelf" />
   </files>
 </package>
