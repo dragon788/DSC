@@ -8,8 +8,6 @@ Describe "Get-TargetResource" {
         Protocol = "protocol"
     }
 
-    Mock Import-Module {} -ParameterFilter {$Name -eq "cWebAdministration"}
-
     Context "when site has a single binding" {
         Mock Get-ItemProperty {@{collection = $bindingProperties}} -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
 
@@ -53,8 +51,6 @@ Describe "Get-TargetResource" {
 }
 
 Describe "Test-TargetResource" {
-    Mock Import-Module {} -ParameterFilter {$Name -eq "cWebAdministration"}
-
     $firstBindingProperty = @{
         BindingInformation = "First Binding Information"
         Protocol = "protocol"
@@ -207,8 +203,6 @@ Describe "Test-TargetResource" {
 }
 
 Describe "Set-TargetResource" {
-    Mock Import-Module {} -ParameterFilter {$Name -eq "cWebAdministration"}
-
     $firstBindingProperty = @{
         BindingInformation = "First Binding Information"
         Protocol = "protocol"
