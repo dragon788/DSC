@@ -1,5 +1,6 @@
 properties {
   $pesterHome = ".\Packages\Pester.2.1.0\tools"
+  $pester = "${pesterHome}\bin\pester.bat"
   $chocolateyHome = ".\Packages\chocolatey.0.9.8.27\tools\chocolateyInstall"
   $chocolatey = "${chocolateyHome}\chocolatey.ps1"
   $testOutput = ".\Test.xml"
@@ -98,17 +99,11 @@ function Invoke-Tests {
     [string]$TestName
   )
 
-  Import-Module "${pesterHome}\Pester.psm1"
-  $testOutput = "Test.xml"
-
   if ($TestName) {
-    $pester = Invoke-Pester -Path $Path -OutputXml $testOutput -TestName $TestName -PassThru
+    exec { & $pester -Path $Path -TestName $TestName }
   }
   else {
-    $pester = Invoke-Pester -Path $Path -OutputXml $testOutput -PassThru
-  }
-  if ($pester.FailedCount -gt 0) {
-    throw "Build Failed"
+    exec { & $pester -Path $Path }
   }
 }
 
