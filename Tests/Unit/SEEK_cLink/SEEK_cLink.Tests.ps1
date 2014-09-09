@@ -11,7 +11,7 @@ Describe "Get-TargetResource" {
         }
     }
 
-    Context "when the link does not exsit" {
+    Context "when the link does not exist" {
         Mock Test-Path { $false }
 
         It "ensure is absent" {
@@ -50,21 +50,19 @@ Describe "Set-TargetResource" {
     $testRoot = (Get-PSDrive TestDrive).Root
     MkDir "${testRoot}\the-target" | Out-Null
     Echo $null > "${testRoot}\the-target\a-file"
-    cmd /c mklink "/D" "C:\Temp\new-link" "${testRoot}\the-target" | Out-Null
+    cmd /c mklink "/D" "${testRoot}\new-link" "${testRoot}\the-target" | Out-Null
 
     Context "when desired state is absent" {
         It "deletes the link" {
-            Set-TargetResource -Ensure "Absent" -Type "/D" -Link "C:\Temp\new-link" -Target "${testRoot}\the-target"
-            Test-Path "C:\Temp\new-link" | Should Be $false
+            Set-TargetResource -Ensure "Absent" -Type "/D" -Link "${testRoot}\new-link" -Target "${testRoot}\the-target"
+            Test-Path "${testRoot}\new-link" | Should Be $false
         }
     }
 
     Context "when desired state is present" {
         It "makes the link" {
-            Set-TargetResource -Type "/D" -Link "C:\Temp\new-link" -Target "${testRoot}\the-target"
-            Test-Path "C:\Temp\new-link\a-file" | Should Be $true
+            Set-TargetResource -Type "/D" -Link "${testRoot}\new-link" -Target "${testRoot}\the-target"
+            Test-Path "${testRoot}\new-link\a-file" | Should Be $true
         }
-
-        cmd /c rmdir "C:\Temp\new-link"
     }
 }
