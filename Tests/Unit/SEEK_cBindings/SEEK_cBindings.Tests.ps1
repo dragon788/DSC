@@ -20,7 +20,7 @@ Describe "Get-TargetResource" {
         }
 
         It "ensure is present" {
-            (Get-TargetResource -Site "MySite").Ensure | Should Be "Present"
+            (Get-TargetResource -Site "MySite").Ensure | Should Be "Absent"
         }
     }
 
