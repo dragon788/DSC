@@ -7,6 +7,7 @@ try
 			cmd /c rmdir "$DSCResourcesRoot\$_"
 		}
 		cmd /c mklink /j "$DSCResourcesRoot\$_" "$DSCResourceTarget\$_"
+		Get-ChildItem -Path "$DSCResourcesRoot\$_" -File -Recurse | Unblock-File
 	}
 
 	Write-ChocolateySuccess 'SEEK PowerShell DSC Resources'
