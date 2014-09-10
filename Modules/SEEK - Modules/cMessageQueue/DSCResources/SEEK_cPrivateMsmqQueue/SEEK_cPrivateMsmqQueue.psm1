@@ -22,7 +22,7 @@ function Get-TargetResource
 
 function Set-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param
     (
         [parameter(Mandatory = $true)]
@@ -52,20 +52,29 @@ function Set-TargetResource
 
     if($Ensure -eq "Absent")
     {
-        Remove-Queue($Name)
+        if ($PsCmdlet.ShouldProcess($Name, 'Removing') )
+        {
+          Remove-Queue($Name)
+        }
     }
     else
     {
         if(Test-QueueExists($Name))
         {
-            Remove-Queue($Name)
+            if ($PsCmdlet.ShouldProcess($Name, 'Removing existing') )
+            {
+                Remove-Queue($Name)
+            }
         }
 
-        New-Queue -Name $Name `
-            -Transactional ([System.Boolean]::Parse($Transactional)) `
-            -UseJournalQueue ([System.Boolean]::Parse($UseJournalQueue)) `
-            -MaximumJournalSize ([int]::Parse($MaximumJournalSize)) `
-            -Label $Label
+        if ($PsCmdlet.ShouldProcess($Name, 'Creating New Queue'))
+        {
+            New-Queue -Name $Name `
+                -Transactional ([System.Boolean]::Parse($Transactional)) `
+                -UseJournalQueue ([System.Boolean]::Parse($UseJournalQueue)) `
+                -MaximumJournalSize ([int]::Parse($MaximumJournalSize)) `
+                -Label $Label
+        }
     }
 }
 
