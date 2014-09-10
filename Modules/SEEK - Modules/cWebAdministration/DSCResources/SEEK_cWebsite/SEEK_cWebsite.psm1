@@ -512,7 +512,7 @@ function ValidateHostFileEntry
 
         if ($RequireHostFileEntry)
         {
-            if (-not (Select-String $hostFile -pattern $HostEntryName))
+            if (-not (Select-String $hostFile -pattern "^${HostEntryIPAddress}\s+${HostEntryName}\s*$"))
             {
                 $result = $true
             }
