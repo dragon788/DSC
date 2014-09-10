@@ -1089,6 +1089,10 @@ function Get-WebBindingObject
         {
             $bindingProperties["HostName"] = $Binding.BindingInformation
         }
+        "net.msmq"
+        {
+            $bindingProperties["HostName"] = $Binding.BindingInformation.Split("/")[0]
+        }
         default { throw "Invalid protocol ""$($Binding.protocol)""" }
     }
 

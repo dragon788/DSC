@@ -2,7 +2,7 @@
 Class SEEK_cWebBindingInformation
 {
     [write]UInt16 Port;
-    [Write,ValueMap{"http", "https", "net.pipe", "net.tcp"},Values{"http", "https", "net.pipe", "net.tcp"}] string Protocol;
+    [Write,ValueMap{"http", "https", "net.pipe", "net.tcp", "net.msmq"},Values{"http", "https", "net.pipe", "net.tcp", "net.msmq"}] string Protocol;
     [write]String IPAddress;
     [write]String HostName;
     [write]String CertificateThumbprint;
