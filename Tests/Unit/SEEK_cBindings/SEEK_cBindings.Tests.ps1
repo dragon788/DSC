@@ -167,8 +167,10 @@ Describe "Test-TargetResource" {
     }
 
     Context "when given a https binding" {
-        $httpsCimBinding = New-HttpsCimBinding -CertificateThumbprint "thumbprint" -CertificateStoreName "certificate store name" -IPAddress "127.0.0.1" -Port 443
-        $httpsBindingHash = @{ BindingInformation = "127.0.0.1:443:"; Protocol = "https"; certificateHash = "thumbprint"; CertificateStoreName = "certificate store name" }
+        Mock Get-ChildItem {@(@{Subject = "certificate subject"; Thumbprint = "thumbprint"})}
+
+        $httpsCimBinding = New-HttpsCimBinding -CertificatePath "Cert:\ssl-cert-path" -CertificateSubject "certificate subject" -IPAddress "*" -Port 443
+        $httpsBindingHash = @{ BindingInformation = "*:443:"; Protocol = "https"; certificatePath = "Cert:\ssl-cert-path"; CertificateSubject = "certificate subject" }
 
         It "is true, when ensure is present, the binding is present, and the certificates match" {
             Mock Get-ItemProperty { @{collection = @($httpsBindingHash)} } -Verifiable -ParameterFilter {$Path -eq "IIS:\Sites\MySite" -and $Name -eq "bindings"}
@@ -313,8 +315,10 @@ Describe "Set-TargetResource" {
     }
 
     Context "when given a https binding" {
-        $httpsCimBinding = New-HttpsCimBinding -CertificatePath "ssl-cert-path" -CertificateStoreName "certificate store name" -CertificateThumbprint "thumbprint" -IPAddress "*" -Port 443
-        $httpsBindingHash = @{ BindingInformation = "*:443:"; Protocol = "https"; certificateHash = "thumbprint"; CertificateStoreName = "certificate store name" }
+        Mock Get-ChildItem {@(@{Subject = "certificate subject"; Thumbprint = "thumbprint"})}
+
+        $httpsCimBinding = New-HttpsCimBinding -CertificatePath "Cert:\ssl-cert-path" -CertificateSubject "certificate subject" -IPAddress "*" -Port 443
+        $httpsBindingHash = @{ BindingInformation = "*:443:"; Protocol = "https"; certificatePath = "Cert:\ssl-cert-path"; CertificateSubject = "certificate subject" }
 
         It "removes the binding, preserving existing bindings, when ensure is absent" {
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
@@ -328,7 +332,7 @@ Describe "Set-TargetResource" {
         }
 
         It "adds the binding, preserving existing bindings, and assigns the certificate, when ensure is present" {
-            Mock Get-Item { @{} } -Verifiable -ParameterFilter { $Path -eq "ssl-cert-path\thumbprint" }
+            Mock Get-Item { @{} } -Verifiable -ParameterFilter { $Path -eq "Cert:\ssl-cert-path\thumbprint" }
             Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq "IIS:\SslBindings\0.0.0.0!443" }
 
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter {
@@ -342,3 +346,5 @@ Describe "Set-TargetResource" {
         }
     }
 }
+
+

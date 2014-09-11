@@ -15,8 +15,7 @@ class SEEK_cBinding
 
 	// HTTPS
 	string CertificatePath;
-	string CertificateStoreName;
-	string CertificateThumbprint;
+	string CertificateSubject;
 };
 
 [ClassVersion("1.0.0"), FriendlyName("cBindings")]

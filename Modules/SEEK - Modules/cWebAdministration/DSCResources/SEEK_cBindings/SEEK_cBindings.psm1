@@ -107,16 +107,14 @@ function New-HttpsCimBinding {
     param
     (
         [System.String] $CertificatePath,
-        [System.String] $CertificateThumbprint,
-        [System.String] $CertificateStoreName,
+        [System.String] $CertificateSubject,
         [System.String] $IPAddress,
         [System.UInt16] $Port
     )
 
     New-CimInstance -ClassName SEEK_cBinding -ClientOnly -Property @{
         CertificatePath = $CertificatePath
-        CertificateThumbprint = $CertificateThumbprint
-        CertificateStoreName = $CertificateStoreName
+        CertificateSubject = $CertificateSubject
         IPAddress = $IPAddress
         Port = $Port
         Protocol = "https"
@@ -131,9 +129,17 @@ function add-SslCertificateForHttpsCimBinding
     $ip = get-HttpSysIp $httpsCimBinding.IPAddress
     $path = $httpsCimBinding.CertificatePath
     $port = $httpsCimBinding.Port
-    $thumbprint = $httpsCimBinding.CertificateThumbprint
+    $thumbprint = get-CertificateThumbprint $httpsCimBinding
 
-    Get-Item "${path}\${thumbprint}" | New-Item "IIS:\SslBindings\${ip}!${port}"
+    $sslBindingPath = "IIS:\SslBindings\${ip}!${port}"
+
+    if (Test-Path $sslBindingPath) {
+        Write-Verbose "SSL binding for endpoint ${ip}:${port} alerady exists."
+        Write-Verbose "Clobbering with new SSL binding."
+        Remove-Item $sslBindingPath
+    }
+
+    Get-Item "${path}\${thumbprint}" | New-Item $sslBindingPath
 }
 
 function compare-CimBindings {
@@ -148,17 +154,8 @@ function compare-CimBindings {
     $matchingProtocol = $cimBinding.Protocol -eq $otherCimBinding.Protocol
 
     if (-not ($matchingBindingInformation -and $matchingProtocol)) { return $false }
-    if ($cimBinding.Protocol -eq "https") { return compare-CimHttpsBindings $cimBinding $otherCimBinding }
 
     $true
-}
-
-function compare-CimHttpsBindings {
-    [CmdletBinding()]
-    param($cimHttpsBinding, $otherCimHttpsBinding)
-
-    $cimHttpsBinding.CertificateStoreName -eq $otherCimHttpsBinding.CertificateStoreName -and
-    $cimHttpsBinding.CertificateThumbprint -eq $otherCimHttpsBinding.CertificateThumbprint
 }
 
 function containsCimBinding {
@@ -215,6 +212,14 @@ function get-BindingsResource
     }
 
     $result
+}
+
+function get-CertificateThumbprint
+{
+    [CmdletBinding()]
+    param($httpsCimBinding)
+
+    (Get-ChildItem -Path $httpsCimBinding.CertificatePath | Where Subject -eq $httpsCimBinding.CertificateSubject).Thumbprint
 }
 
 function get-CurrentCimBindings
@@ -295,8 +300,8 @@ function new-CimBindingsWithBindingInformation
     $cimBindings | ForEach-Object {
         new-CimBindingFromHash @{
             BindingInformation = get-BindingInformation $_
-            CertificateStoreName = $_.CertificateStoreName
-            CertificateThumbprint = $_.CertificateThumbprint
+            CertificatePath = $_.CertificatePath
+            CertificateSubject = $_.CertificateSubject
             HostName = $_.HostName
             IPAddress = $_.IPAddress
             Port = $_.Port
@@ -316,8 +321,8 @@ function new-CimBindingFromConfigElement
     }
 
     if ($bindingHash.Protocol -eq "https") {
-        $bindingHash.CertificateStoreName = $bindingConfigElement.certificateStoreName
-        $bindingHash.CertificateThumbprint = $bindingConfigElement.certificateHash
+        $bindingHash.CertificatePath = $bindingConfigElement.certificatePath
+        $bindingHash.CertificateSubject = $bindingConfigElement.certificateSubject
     }
 
     new-CimBindingFromHash $bindingHash
@@ -366,3 +371,4 @@ function select-FromCimBindingsWithoutCimBindings
 }
 
 Export-ModuleMember -Function *-TargetResource
+
