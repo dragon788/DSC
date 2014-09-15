@@ -21,6 +21,8 @@ Describe "Get-TargetResource" {
         Mock Test-AuthenticationEnabled { return $true } `
             -ParameterFilter { ($Type -eq "Windows") }
 
+        Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
+
         It "returns the web application state as a hashtable" {
             $WebApplication = Get-TargetResource -Website "MySite" -Name "MyApp"
             $WebApplication.WebSite | Should Be "MySite"
@@ -32,6 +34,7 @@ Describe "Get-TargetResource" {
             $WebApplication.AuthenticationInfo.CimInstanceProperties["Basic"].Value | Should Be "false"
             $WebApplication.AuthenticationInfo.CimInstanceProperties["Digest"].Value | Should Be "false"
             $WebApplication.AuthenticationInfo.CimInstanceProperties["Windows"].Value | Should Be "true"
+            $WebApplication.EnabledProtocols | Should Be "enabled protocols"
         }
     }
 
@@ -44,6 +47,7 @@ Describe "Get-TargetResource" {
             $WebApplication.PhysicalPath | Should Be $null
             $WebApplication.WebAppPool | Should Be $null
             $WebApplication.AuthenticationInfo | Should Be $null
+            $WebApplication.EnabledProtocols | Should Be $null
         }
     }
 }
@@ -53,6 +57,7 @@ Describe "Test-TargetResource" {
 
     Context "when the web application is present" {
         Mock Find-UniqueWebApplication { return $MockWebApplication }
+        Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
 
         It "returns true if the web application should be present" {
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" | Should Be $true
@@ -68,6 +73,14 @@ Describe "Test-TargetResource" {
 
         It "returns false if the physical path is different" {
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\OtherPath" | Should Be $false
+        }
+
+        It "returns true if the enabled protocols are the same" {
+            Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -EnabledProtocols "enabled protocols" | Should Be $true
+        }
+
+        It "returns false if the enabled protocols differ" {
+            Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -EnabledProtocols "not enabled protocols" | Should Be $false
         }
 
         It "returns true if the authentication info is the same" {
@@ -112,6 +125,12 @@ Describe "Set-TargetResource" {
         It "installs the web application" {
             Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App"
             Assert-MockCalled New-WebApplication -Exactly 1
+        }
+
+        It "sets the enabled protocols, if provided" {
+            Mock Set-ItemProperty {} -Verifiable -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" -and $Value -eq "enabled protocols"}
+            Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -EnabledProtocols "enabled protocols"
+            Assert-VerifiableMocks
         }
     }
 

@@ -17,5 +17,6 @@ class SEEK_cWebApplication : OMI_BaseResource
     [Write, Description("Whether web application should be present or absent"), ValueMap{"Present","Absent"}, Values{"Present","Absent"}] string Ensure;
     [write] string SslFlags;
     [write, EmbeddedInstance("SEEK_cWebAuthenticationInformation"), Description("Hashtable containing authentication information (Anonymous, Basic, Digest, Windows)")] string AuthenticationInfo;
+    [write] string EnabledProtocols; # A comma seperated list of protocols, for example: "http,net.msmq"
 };
 
