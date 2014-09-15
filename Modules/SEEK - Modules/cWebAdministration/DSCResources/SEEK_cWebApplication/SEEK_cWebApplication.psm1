@@ -24,6 +24,7 @@ function Get-TargetResource
             Ensure = "Present"
             AuthenticationInfo = Get-AuthenticationInfo -Website $Website -ApplicationName $Name
             SslFlags = (Get-SslFlags -Location "${Website}/${Name}")
+            EnabledProtocols = (Get-ItemProperty "IIS:\Sites\${Website}\${Name}" -Name "EnabledProtocols").Value
         }
     }
 
@@ -35,6 +36,7 @@ function Get-TargetResource
         Ensure = "Absent"
         AuthenticationInfo = $null
         SslFlags = $null
+        EnabledProtocols = $null
     }
 }
 
@@ -61,6 +63,8 @@ function Set-TargetResource
 
         [ValidateSet("Present","Absent")]
         [System.String]$Ensure = "Present",
+
+        [System.String] $EnabledProtocols,
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
@@ -92,6 +96,8 @@ function Set-TargetResource
 
         Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
         Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
+
+        if ($EnabledProtocols) { Set-ItemProperty "IIS:\Sites\${Website}\${Name}" -Name EnabledProtocols -Value $EnabledProtocols }
     }
     elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
     {
@@ -125,6 +131,8 @@ function Test-TargetResource
         [ValidateSet("Present","Absent")]
         [System.String]$Ensure = "Present",
 
+        [System.String] $EnabledProtocols,
+
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
 
@@ -134,11 +142,14 @@ function Test-TargetResource
 
     if($Ensure -eq "Present")
     {
+        $enabledProtocolsMatch = if ($EnabledProtocols) { $webApplication.EnabledProtocols -eq $EnabledProtocols } else { $true }
+
         if(($webApplication.Ensure -eq $Ensure) `
             -and ($webApplication.PhysicalPath -eq $PhysicalPath) `
             -and ($webApplication.WebAppPool -eq $WebAppPool) `
             -and ((Get-SslFlags -Location "${Website}/${Name}") -eq $SslFlags) `
-            -and (Test-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo))
+            -and (Test-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo) `
+            -and $enabledProtocolsMatch )
         {
             return $true
         }
