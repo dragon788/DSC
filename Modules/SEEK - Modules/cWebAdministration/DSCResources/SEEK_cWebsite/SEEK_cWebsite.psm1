@@ -52,7 +52,24 @@ function Get-TargetResource
             $CimBindings = foreach ($binding in $bindings)
             {
                 $BindingObject = Get-WebBindingObject -Binding $binding
-                New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;IPAddress=$BindingObject.IPaddress;HostName=$BindingObject.Hostname;CertificateThumbprint=$BindingObject.CertificateThumbprint;CertificateStoreName=$BindingObject.CertificateStoreName} -ClientOnly
+
+                if($BindingObject.Protocol -eq "http") {
+                    New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;HostName=$BindingObject.HostName;IPAddress=$BindingObject.IPAddress} -ClientOnly
+                }
+                elseif($BindingObject.Protocol -eq "https") {
+                    if (($BindingObject.CertificateThumbprint -eq $null) -or ($BindingObject.CertificateStoreName -eq $null)) {
+                        New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;HostName=$BindingObject.HostName;IPAddress=$BindingObject.IPAddress} -ClientOnly
+                    }
+                    else {
+                        New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;HostName=$BindingObject.HostName;IPAddress=$BindingObject.IPAddress;CertificateThumbprint=$BindingObject.CertificateThumbprint;CertificateStoreName=$BindingObject.CertificateStoreName} -ClientOnly
+                    }
+                }
+                elseif($BindingObject.Protocol -eq "net.pipe") {
+                    New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Protocol=$BindingObject.Protocol;HostName=$BindingObject.HostName} -ClientOnly
+                }
+                elseif($BindingObject.Protocol -eq "net.tcp") {
+                    New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$BindingObject.Port;Protocol=$BindingObject.Protocol;HostName=$BindingObject.HostName} -ClientOnly
+                }
             }
 
             $CimAuthentication = Get-AuthenticationInfo -Website $Name
