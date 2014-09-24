@@ -93,14 +93,25 @@ Describe "Set-TargetResource" {
     $shares | Add-Member -NotePropertyName Result -NotePropertyValue $false
     $shares | Add-Member -MemberType ScriptMethod -Name Create -Value $create
 
+    $acl = New-Object -TypeName PSObject
+    $acl | Add-Member -MemberType ScriptMethod -Name SetAccessRule -Value {}
+
+    $accessControlItem = New-Object -TypeName PSObject
+    $accessControlItem | Add-Member -MemberType ScriptMethod -Name GetAccessControl -Value { $acl }
+
+    Mock Get-Item { $accessControlItem }
+
+    Mock New-Object {} -ParameterFilter { $TypeName -eq "System.Security.AccessControl.FileSystemAccessRule" }
+
     Context "when desired state is present, and the path does not exist" {
         Mock Test-Path { $false } -Verifiable -ParameterFilter { $Path -eq $targetPath }
         Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
         Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
 
+        Mock Set-Acl {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
         Set-TargetResource -Path $targetPath -Description $targetDescription
 
-        It "creates the directory" {
+        It "creates the directory and sets the permissions" {
             Assert-VerifiableMocks
         }
 
@@ -116,6 +127,7 @@ Describe "Set-TargetResource" {
         Mock New-Item {}
         Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
 
+        Mock Set-Acl {} -ParameterFilter { $Path -eq $targetPath }
         Set-TargetResource -Path $targetPath -Description $targetDescription
 
         It "does not create the directory" {
@@ -124,6 +136,10 @@ Describe "Set-TargetResource" {
 
         It "shares the directory" {
             $shares.Result | should be $true
+        }
+
+        It "sets the permissions" {
+            Assert-VerifiableMocks
         }
     }
 

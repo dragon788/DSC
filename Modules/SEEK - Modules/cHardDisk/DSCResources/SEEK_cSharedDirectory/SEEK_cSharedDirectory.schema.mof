@@ -3,4 +3,5 @@ class SEEK_cSharedDirectory : OMI_BaseResource
 {
     [Key] string Path;
     [Write] string Description;
+    [Write] string[] Permissions;
 };
