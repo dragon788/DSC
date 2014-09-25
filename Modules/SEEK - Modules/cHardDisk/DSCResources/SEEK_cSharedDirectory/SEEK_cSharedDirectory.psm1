@@ -54,7 +54,9 @@ function Set-TargetResource
         [System.String]
         $Ensure  = "Present",
 
-        [System.String[]] $Permissions = @("Everyone", "FullControl", "Access")
+        [AllowEmptyCollection()]
+        [System.String[]]
+        $Permissions = @("Everyone", "FullControl", "Access")
     )
 
     $pathExists = Test-Path $Path
