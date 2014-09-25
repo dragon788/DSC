@@ -6,7 +6,6 @@ Mock Find-UniqueWebApplication {return $null}
 Mock Remove-WebApplication
 Mock Test-AuthenticationEnabled { return $false }
 
-
 $MockWebApplication = New-Object PSObject
 $MockWebApplication | Add-Member PhysicalPath "C:\App"
 $MockWebApplication | Add-Member ApplicationPool "MyAppPool"
@@ -22,7 +21,8 @@ Describe "Get-TargetResource" {
             -ParameterFilter { ($Type -eq "Windows") }
 
         Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
-        Mock Get-ASApplication { @{AutoStartMode = "auto start mode"} } -ParameterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" }
+
+        function Get-ASApplication { @{AutoStartMode = "auto start mode"} }
 
         It "returns the web application state as a hashtable" {
             $WebApplication = Get-TargetResource -Website "MySite" -Name "MyApp"
@@ -60,7 +60,8 @@ Describe "Test-TargetResource" {
     Context "when the web application is present" {
         Mock Find-UniqueWebApplication { return $MockWebApplication }
         Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
-        Mock Get-ASApplication { @{AutoStartMode = "auto start mode"} } -ParameterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" }
+
+        function Get-ASApplication { @{AutoStartMode = "auto start mode"} }
 
         It "returns true if the web application should be present" {
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" | Should Be $true
@@ -131,9 +132,25 @@ Describe "Set-TargetResource" {
     Mock Set-WebConfigurationProperty
     Mock Get-WebConfiguration
     Mock Set-WebConfiguration
-    Mock Set-ASApplication
+
+    $testSetASApplication =
+    {
+        param ($sitename, $virtualpath, $autostartmode)
+        $this.Result = $sitename -eq "MySite" -and $virtualpath -eq "MyApp" -and $autostartmode -eq "All"
+    }
+
+    $mockSetASApplication = New-Object -TypeName PSObject
+    $mockSetASApplication | Add-Member -NotePropertyName Result -NotePropertyValue $false
+    $mockSetASApplication | Add-Member -MemberType ScriptMethod -Name setASApplication -Value $testSetASApplication
+
+    function Set-ASApplication
+    {
+        param ($sitename, $virtualpath, $autostartmode)
+        $mockSetASApplication.setASApplication($sitename, $virtualpath, $autostartmode)
+    }
 
     Context "when the web application is absent" {
+
         It "installs the web application" {
             Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App"
             Assert-MockCalled New-WebApplication -Exactly 1
@@ -146,9 +163,8 @@ Describe "Set-TargetResource" {
         }
 
         It "sets the auto start mode, if provided" {
-            Mock Set-ASApplication -Verifiable -ParamterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" -and $AutoStartMode -eq "All" }
             Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AutoStartMode "All"
-            Assert-VerifiableMocks
+            $mockSetASApplication.Result | should be $true
         }
     }
 
