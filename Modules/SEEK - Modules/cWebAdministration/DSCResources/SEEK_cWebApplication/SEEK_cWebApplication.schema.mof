@@ -18,5 +18,6 @@ class SEEK_cWebApplication : OMI_BaseResource
     [write] string SslFlags;
     [write, EmbeddedInstance("SEEK_cWebAuthenticationInformation"), Description("Hashtable containing authentication information (Anonymous, Basic, Digest, Windows)")] string AuthenticationInfo;
     [write, Description("A comma seperated list of protocols, for example: http,net.msmq")] string EnabledProtocols;
+    [write, ValueMap{"All", "Custom", "Disable"}, Values{"All", "Custom", "Disable"}] string AutoStartMode;
 };
 

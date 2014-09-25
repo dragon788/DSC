@@ -25,6 +25,7 @@ function Get-TargetResource
             AuthenticationInfo = Get-AuthenticationInfo -Website $Website -ApplicationName $Name
             SslFlags = (Get-SslFlags -Location "${Website}/${Name}")
             EnabledProtocols = (Get-ItemProperty "IIS:\Sites\${Website}\${Name}" -Name "EnabledProtocols").Value
+            AutoStartMode = (Get-ASApplication -SiteName $Website -VirtualPath $Name).AutoStartMode
         }
     }
 
@@ -37,6 +38,7 @@ function Get-TargetResource
         AuthenticationInfo = $null
         SslFlags = $null
         EnabledProtocols = $null
+        AutoStartMode = $null
     }
 }
 
@@ -65,6 +67,8 @@ function Set-TargetResource
         [System.String]$Ensure = "Present",
 
         [System.String] $EnabledProtocols,
+
+        [System.String] $AutoStartMode,
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
@@ -98,6 +102,8 @@ function Set-TargetResource
         Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
 
         if ($EnabledProtocols) { Set-ItemProperty "IIS:\Sites\${Website}\${Name}" -Name EnabledProtocols -Value $EnabledProtocols }
+
+        if ($AutoStartMode) { Set-ASApplication -SiteName $Website -VirtualPath $Name -AutoStartMode $AutoStartMode -EnableApplicationPool }
     }
     elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
     {
@@ -133,6 +139,8 @@ function Test-TargetResource
 
         [System.String] $EnabledProtocols,
 
+        [System.String] $AutoStartMode,
+
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
 
@@ -143,13 +151,15 @@ function Test-TargetResource
     if($Ensure -eq "Present")
     {
         $enabledProtocolsMatch = if ($EnabledProtocols) { $webApplication.EnabledProtocols -eq $EnabledProtocols } else { $true }
+        $autoStartModesMatch = if ($AutoStartMode) { $webApplication.AutoStartMode -eq $AutoStartMode } else { $true }
 
         if(($webApplication.Ensure -eq $Ensure) `
             -and ($webApplication.PhysicalPath -eq $PhysicalPath) `
             -and ($webApplication.WebAppPool -eq $WebAppPool) `
             -and ((Get-SslFlags -Location "${Website}/${Name}") -eq $SslFlags) `
             -and (Test-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo) `
-            -and $enabledProtocolsMatch )
+            -and $enabledProtocolsMatch `
+            -and $autoStartModesMatch )
         {
             return $true
         }

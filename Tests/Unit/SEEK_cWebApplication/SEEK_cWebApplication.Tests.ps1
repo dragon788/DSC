@@ -22,6 +22,7 @@ Describe "Get-TargetResource" {
             -ParameterFilter { ($Type -eq "Windows") }
 
         Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
+        Mock Get-ASApplication { @{AutoStartMode = "auto start mode"} } -ParameterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" }
 
         It "returns the web application state as a hashtable" {
             $WebApplication = Get-TargetResource -Website "MySite" -Name "MyApp"
@@ -35,6 +36,7 @@ Describe "Get-TargetResource" {
             $WebApplication.AuthenticationInfo.CimInstanceProperties["Digest"].Value | Should Be "false"
             $WebApplication.AuthenticationInfo.CimInstanceProperties["Windows"].Value | Should Be "true"
             $WebApplication.EnabledProtocols | Should Be "enabled protocols"
+            $WebApplication.AutoStartMode | Should Be "auto start mode"
         }
     }
 
@@ -58,6 +60,7 @@ Describe "Test-TargetResource" {
     Context "when the web application is present" {
         Mock Find-UniqueWebApplication { return $MockWebApplication }
         Mock Get-ItemProperty { @{ Value = "enabled protocols" } } -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" }
+        Mock Get-ASApplication { @{AutoStartMode = "auto start mode"} } -ParameterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" }
 
         It "returns true if the web application should be present" {
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" | Should Be $true
@@ -81,6 +84,14 @@ Describe "Test-TargetResource" {
 
         It "returns false if the enabled protocols differ" {
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -EnabledProtocols "not enabled protocols" | Should Be $false
+        }
+
+        It "returns true if the auto start modes are the same" {
+            Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AutoStartMode "auto start mode" | Should Be $true
+        }
+
+        It "returns false if the auto start modes differ" {
+            Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AutoStartMode "not auto start mode" | Should Be $false
         }
 
         It "returns true if the authentication info is the same" {
@@ -120,6 +131,7 @@ Describe "Set-TargetResource" {
     Mock Set-WebConfigurationProperty
     Mock Get-WebConfiguration
     Mock Set-WebConfiguration
+    Mock Set-ASApplication
 
     Context "when the web application is absent" {
         It "installs the web application" {
@@ -130,6 +142,12 @@ Describe "Set-TargetResource" {
         It "sets the enabled protocols, if provided" {
             Mock Set-ItemProperty {} -Verifiable -ParameterFilter { $Path -eq "IIS:\Sites\MySite\MyApp" -and $Name -eq "EnabledProtocols" -and $Value -eq "enabled protocols"}
             Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -EnabledProtocols "enabled protocols"
+            Assert-VerifiableMocks
+        }
+
+        It "sets the auto start mode, if provided" {
+            Mock Set-ASApplication -Verifiable -ParamterFilter { $SiteName -eq "MySite" -and $VirtualPath -eq "MyApp" -and $AutoStartMode -eq "All" }
+            Set-TargetResource -Website "MySite" -Name "MyApp" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AutoStartMode "All"
             Assert-VerifiableMocks
         }
     }
