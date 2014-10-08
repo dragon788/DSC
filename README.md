@@ -2,7 +2,8 @@
 
 This project includes custom DSC resources used by SEEK Ltd.
 
-[![Build status](https://ci.appveyor.com/api/projects/status/wu5ax0vfkwyqij0p)](https://ci.appveyor.com/project/warnergodfrey/dsc)
+[![Build status](https://ci.appveyor.com/api/projects/status/laj1i4wxmxj7nkc8)](https://ci.appveyor.com/project/SEEKJobs/dsc)
+
 
 ## Setup
 
