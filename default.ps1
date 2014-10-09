@@ -16,12 +16,12 @@ task Package -depends Clean {
     $version = "${version}.${buildNumber}"
   }
   if (-not (Test-Path $outputPackageDir)) {
-    New-Item -ItemType directory -Path $outputPackageDir
+    New-Item -ItemType directory -Path $outputPackageDir | Out-Null
   }
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
     Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
-    exec { chocolatey.cmd pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
+    exec { chocolatey.ps1 pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
 }
 
@@ -116,7 +116,7 @@ function Update-ModuleManifestVersion {
   )
 
   if (-not (Test-Path $OutputDir)) {
-    New-Item -ItemType directory -Path $OutputDir
+    New-Item -ItemType directory -Path $OutputDir | Out-Null
   }
 
   Get-ChildItem -Path $Path -Filter *.psd1 | Foreach-Object {
