@@ -1,8 +1,4 @@
 properties {
-  $pesterHome = ".\Packages\Pester.2.1.0\tools"
-  $pester = "${pesterHome}\bin\pester.bat"
-  $chocolateyHome = ".\Packages\chocolatey.0.9.8.27\tools\chocolateyInstall"
-  $chocolatey = "${chocolateyHome}\chocolatey.ps1"
   $testOutput = ".\Test.xml"
   $outputDir = ".\Output"
   $outputPackageDir = "${outputDir}\Packages"
@@ -25,7 +21,7 @@ task Package -depends Clean {
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
     Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
-    exec { & $chocolatey pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
+    exec { chocolatey.cmd pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
 }
 
@@ -50,16 +46,16 @@ task DisableDeveloperMode {
 }
 
 task Install -depends Package {
-  exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) }
+  exec { chocolatey.cmd install seek-dsc -source $(Resolve-Path $outputPackageDir) }
 }
 
 task Reinstall {
-  exec { & $chocolatey install seek-dsc -source $(Resolve-Path $outputPackageDir) -force }
+  exec { chocolatey.cmd install seek-dsc -source $(Resolve-Path $outputPackageDir) -force }
 }
 
 task Uninstall {
   $packageNames = Get-ChildItem *.nuspec -Recurse | Foreach-Object { $_.Basename }
-  & $chocolatey uninstall @packageNames
+  chocolatey.cmd uninstall @packageNames
 }
 
 task UnitTest {
@@ -100,10 +96,10 @@ function Invoke-Tests {
   )
 
   if ($TestName) {
-    exec { & $pester -Path $Path -TestName $TestName }
+    exec { pester.bat -Path $Path -TestName $TestName }
   }
   else {
-    exec { & $pester -Path $Path }
+    exec { pester.bat -Path $Path }
   }
 }
 

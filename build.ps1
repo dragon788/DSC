@@ -1,8 +1,16 @@
-$nugetHome = ".\.nuget\NuGet.CommandLine.2.8.2\tools"
-$nuget = "${nugetHome}\NuGet.exe"
-& $nuget install .\.nuget\packages.config -OutputDirectory .\Packages -NonInteractive
-Import-Module (Join-Path $PSScriptRoot "Packages\psake.4.3.2\tools\psake.psm1")
+# install packages required for build
+[Environment]::SetEnvironmentVariable("PATH", `
+  "${PSScriptRoot}\.nuget\NuGet.CommandLine.2.8.2\tools;" + $env:PATH, "Process")
+NuGet.exe install .\.nuget\packages.config -OutputDirectory .\Packages -ExcludeVersion -NonInteractive
+if (-not $?) { exit 1 }
+
+# package post-install: add installed packages to path
+[Environment]::SetEnvironmentVariable("PATH", `
+  "${PSScriptRoot}\Packages\chocolatey\tools\chocolateyInstall;" `
+    + "${PSScriptRoot}\Packages\pester\tools\bin;" `
+    + $env:PATH, "Process")
+
+# run psake
+Import-Module (Join-Path $PSScriptRoot "Packages\psake\tools\psake.psm1")
 Invoke-Psake @args
-if (-not $psake.build_success) {
-  exit 1
-}
+if (-not $psake.build_success) { exit 1 }
