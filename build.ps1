@@ -1,7 +1,7 @@
 # install packages required for build
 [Environment]::SetEnvironmentVariable("PATH", `
   "${PSScriptRoot}\.nuget\NuGet.CommandLine.2.8.2\tools;" + $env:PATH, "Process")
-NuGet.exe install .\.nuget\packages.config -OutputDirectory .\Packages -ExcludeVersion -NonInteractive
+NuGet.exe install ${PSScriptRoot}\.nuget\packages.config -OutputDirectory .\Packages -ExcludeVersion -NonInteractive
 if (-not $?) { exit 1 }
 
 # package post-install: add installed packages to path
