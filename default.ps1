@@ -20,6 +20,7 @@ task Package -depends Clean {
   }
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
     Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
+    # chocolatey.cmd does not support paths with spaces, using chocolatey.ps1 instead
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
     exec { chocolatey.ps1 pack """$($_.FullName)"" -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
