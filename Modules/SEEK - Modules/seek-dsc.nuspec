@@ -21,6 +21,7 @@
       <dependency id="seek-dsc-software"/>
       <dependency id="seek-dsc-topshelf"/>
       <dependency id="seek-dsc-webadministration"/>
+      <dependency id="seek-dsc-database"/>
     </dependencies>
   </metadata>
   <files>
