@@ -26,23 +26,27 @@ function Get-TargetResource
 
 function Set-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Name,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateNotNullOrEmpty()]
         [System.String]$Executable,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
         [ValidateSet("true", "false")]
         [String]$Start = "false",
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
         [ValidateSet("true", "false")]
         [String]$AutoStart = "true",
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
@@ -66,23 +70,28 @@ function Set-TargetResource
 
 function Test-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Name,
 
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Executable,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
         [ValidateSet("true", "false")]
         [String]$Start = "false",
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
         [ValidateSet("true", "false")]
         [String]$AutoStart = "true",
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"

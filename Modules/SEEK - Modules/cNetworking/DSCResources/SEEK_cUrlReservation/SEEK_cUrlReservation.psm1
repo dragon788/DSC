@@ -44,7 +44,7 @@ function Get-TargetResource
 
 function Set-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
@@ -59,9 +59,12 @@ function Set-TargetResource
         [ValidateNotNullOrEmpty()]
         [String]$Port,
 
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateNotNullOrEmpty()]
         [String]$User,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
@@ -79,7 +82,7 @@ function Set-TargetResource
 
 function Test-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
@@ -94,9 +97,12 @@ function Test-TargetResource
         [ValidateNotNullOrEmpty()]
         [String]$Port,
 
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateNotNullOrEmpty()]
         [String]$User,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
@@ -211,7 +217,7 @@ function Invoke-NetshUrlAcl
         [String]$User
     )
     $argumentList = @(
-        $Protocol, $Operation, 'urlacl', 
+        $Protocol, $Operation, 'urlacl',
         "url=""${Url}"""
     )
     if ($user)

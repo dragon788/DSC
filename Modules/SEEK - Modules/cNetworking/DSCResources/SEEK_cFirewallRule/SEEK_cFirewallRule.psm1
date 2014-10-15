@@ -9,7 +9,7 @@ function Get-TargetResource
         [System.String]$Name
     )
 
-    
+
     try
     {
         $advFirewallOutput = (Invoke-NetshAdvFirewall -Name $Name -Operation "show")
@@ -33,10 +33,10 @@ function Get-TargetResource
     }
 
     if ($advFirewallOutput -match "Direction:\s+(.+?)\s+")
-    { 
-        $direction = switch ($Matches[1]) 
-        { 
-            "in" {"Inbound"} 
+    {
+        $direction = switch ($Matches[1])
+        {
+            "in" {"Inbound"}
             "out" {"Outbound"}
         }
     }
@@ -65,29 +65,31 @@ function Get-TargetResource
 
 function Set-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Name,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("Inbound","Outbound")]
         [System.String]$Direction,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateNotNullOrEmpty()]
         [System.String]$LocalPort,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("TCP","UDP")]
         [System.String]$Protocol,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("Allow","Block", "Bypass")]
         [System.String]$Action,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
@@ -109,29 +111,31 @@ function Set-TargetResource
 
 function Test-TargetResource
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Absent")]
     param
     (
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Name,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("Inbound","Outbound")]
         [System.String]$Direction,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateNotNullOrEmpty()]
         [System.String]$LocalPort,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("TCP","UDP")]
         [System.String]$Protocol,
 
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory=$true,ParameterSetName = "Present")]
         [ValidateSet("Allow","Block", "Bypass")]
         [System.String]$Action,
 
+        [parameter(Mandatory=$false,ParameterSetName = "Present")]
+        [parameter(Mandatory=$true,ParameterSetName = "Absent")]
         [ValidateSet("Present","Absent")]
         [System.String]
         $Ensure  = "Present"
@@ -168,7 +172,7 @@ function New-NetFirewallRule
         [String]$Protocol,
 
         [String]$LocalPort,
-        
+
         [ValidateSet("Inbound", "Outbound")]
         [String]$Direction,
 
@@ -213,7 +217,7 @@ function Invoke-NetshAdvFirewall
         [String]$Protocol,
 
         [String]$LocalPort,
-        
+
         [ValidateSet("Inbound", "Outbound")]
         [String]$Direction,
 
@@ -222,15 +226,15 @@ function Invoke-NetshAdvFirewall
     )
 
     $argumentList = @(
-        'advfirewall', 'firewall', $Operation, 'rule', 
+        'advfirewall', 'firewall', $Operation, 'rule',
         "name=""${Name}"""
     )
-    
+
     if ($Direction)
     {
-        $dir = switch ($Direction) 
-        { 
-            "Inbound" {"in"} 
+        $dir = switch ($Direction)
+        {
+            "Inbound" {"in"}
             "Outbound" {"out"}
         }
         $argumentList += "dir=$dir"
