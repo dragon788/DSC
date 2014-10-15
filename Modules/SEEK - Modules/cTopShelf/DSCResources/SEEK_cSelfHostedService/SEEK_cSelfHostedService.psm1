@@ -33,7 +33,7 @@ function Set-TargetResource
         [ValidateNotNullOrEmpty()]
         [System.String]$Name,
 
-        [parameter(Mandatory=$true]
+        [parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Executable,
 
