@@ -78,7 +78,6 @@ function Test-TargetResource
         [System.String]$Name,
 
         [parameter(Mandatory=$true,ParameterSetName = "Present")]
-        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]$Executable,
 
