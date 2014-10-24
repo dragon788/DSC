@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>seek-dsc-appfabric-hosting</id>
+    <title>SEEK DSC AppFabric Hosting</title>
+    <version>0.0.0.1</version>
+    <authors>SEEK Ltd.</authors>
+    <owners>SEEK Ltd.</owners>
+    <description>Custom DSC Resources for hosting applications with AppFabric</description>
+    <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
+    <tags>admin DSC</tags>
+    <copyright>© 2014 SEEK Ltd. All rights reserved.</copyright>
+    <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <releaseNotes></releaseNotes>
+  </metadata>
+  <files>
+    <file src="**" target="lib\cAppFabricHosting" exclude="*.nuspec;cAppFabricHosting.psd1"/>
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cAppFabricHosting.psd1" target="lib\cAppFabricHosting" />
+  </files>
+</package>
