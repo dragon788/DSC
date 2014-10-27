@@ -13,7 +13,7 @@ function Get-TargetResource
         [String]$Name
     )
 
-    $application = (Get-ASApplication -SiteName $Website -VirtualPath $Name)
+    $application = (Get-ASApplication -SiteName $Website -VirtualPath $Name -OutVariable $null)
     if ($application -ne $null)
     {
         $autoStartMode = $application.AutoStartMode
