@@ -66,6 +66,7 @@ function Set-TargetResource
 
         [System.String] $EnabledProtocols,
 
+        [Parameter(Mandatory=$false, HelpMessage="Obsolete")]
         [System.String] $AutoStartMode,
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
@@ -135,6 +136,7 @@ function Test-TargetResource
 
         [System.String] $EnabledProtocols,
 
+        [Parameter(Mandatory=$false, HelpMessage="Obsolete")]
         [System.String] $AutoStartMode,
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
