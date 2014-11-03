@@ -25,7 +25,7 @@ Describe "Synchronized script block" {
                     Write-Host "opening lock file"
                     $stream = (Get-Item $args[0]).OpenWrite()
                     Write-Host "sleeping"
-                    Start-Sleep -m 5000
+                    Start-Sleep -m 4000
                     Write-Host "closing lock file"
                     $stream.close()
                 }
