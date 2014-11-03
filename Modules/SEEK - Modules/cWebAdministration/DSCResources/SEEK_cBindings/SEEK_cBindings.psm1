@@ -1,5 +1,40 @@
 Import-Module WebAdministration
 
+function Synchronized
+{
+    [CmdletBinding()]
+    param
+    (
+        [ValidateNotNullOrEmpty()]
+        [parameter(Mandatory = $true)]
+        [string] $Name,
+
+        [parameter(Mandatory = $true)]
+        [ScriptBlock] $ScriptBlock,
+
+        [parameter(Mandatory = $false)]
+        [int] $MillisecondsTimeout = 5000,
+
+        [parameter(Mandatory = $false)]
+        [boolean] $InitiallyOwned = $false,
+
+        [parameter(Mandatory = $false)]
+        [Object[]] $ArgumentList = @()
+    )
+
+    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "Global\${Name}")
+    
+    if ($mutex.WaitOne($MillisecondsTimeout)) {
+        try {
+            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+        }
+        finally {
+            $mutex.ReleaseMutex()
+        }
+    }
+    else { throw "Cannot aquire mutex: $Name"}
+}
+
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -61,13 +96,19 @@ function Set-TargetResource
         $Clear = $false
     )
 
-    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
 
-    Set-ItemProperty -Path "IIS:\Sites\${Site}" -Name bindings -Value (new-BindingsValue $newCimBindings)
+
+    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
+    $sitePath = $("IIS:\Sites\${Site}")
+    Synchronized -Name "IIS" -ArgumentList $sitePath {
+        Set-ItemProperty -Path $args[0] -Name bindings -Value (new-BindingsValue $newCimBindings)
+    }
     $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
     $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
-    Set-ItemProperty "IIS:\Sites\${Site}" -Name EnabledProtocols -Value ($protocols -join ',')
+    Synchronized -Name "IIS" -ArgumentList $sitePath {
+        Set-ItemProperty $args[0] -Name EnabledProtocols -Value ($protocols -join ',')
+    }
 }
 
 function New-CimBinding
