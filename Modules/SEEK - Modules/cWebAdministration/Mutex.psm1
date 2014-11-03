@@ -25,17 +25,13 @@ function Synchronized
         [ScriptBlock] $ScriptBlock
     )
 
-    Write-Host "creating mutex with name: $Name"
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
     
-    Write-Host "acquiring mutex"
     if ($mutex.WaitOne($MillisecondsTimeout)) {
-        Write-Host "invoking script block"
         try {
             Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
         }
         finally {
-            Write-Host "releasing mutex"
             $mutex.ReleaseMutex()
         }
     }
