@@ -6,6 +6,7 @@ function Synchronized
     param
     (
         [ValidateNotNullOrEmpty()]
+        [ValidatePattern("^[^\\]?")]
         [parameter(Mandatory = $true)]
         [string] $Name,
 
@@ -19,10 +20,14 @@ function Synchronized
         [boolean] $InitiallyOwned = $false,
 
         [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @()
+        [Object[]] $ArgumentList = @(),
+
+        [parameter(Mandatory = $false)]
+        [ValidateSet("Global","Local","Session")]
+        [Object[]] $Scope = "Global"
     )
 
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "Global\${Name}")
+    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
     
     if ($mutex.WaitOne($MillisecondsTimeout)) {
         try {
@@ -100,14 +105,16 @@ function Set-TargetResource
 
     $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
     $sitePath = $("IIS:\Sites\${Site}")
-    Synchronized -Name "IIS" -ArgumentList $sitePath {
-        Set-ItemProperty -Path $args[0] -Name bindings -Value (new-BindingsValue $newCimBindings)
+    Synchronized -Name "IIS" -ArgumentList $sitePath, (new-BindingsValue $newCimBindings) {
+        param($path, $bindings)
+        Set-ItemProperty -Path $path -Name bindings -Value $bindings
     }
     $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
     $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
-    Synchronized -Name "IIS" -ArgumentList $sitePath {
-        Set-ItemProperty $args[0] -Name EnabledProtocols -Value ($protocols -join ',')
+    Synchronized -Name "IIS" -ArgumentList $sitePath, $protocols {
+        param($path, $enabledProtocols)
+        Set-ItemProperty $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
     }
 }
 

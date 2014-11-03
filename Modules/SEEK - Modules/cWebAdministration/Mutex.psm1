@@ -8,6 +8,9 @@ function Synchronized
         [parameter(Mandatory = $true)]
         [string] $Name,
 
+        [parameter(Mandatory = $true)]
+        [ScriptBlock] $ScriptBlock,
+
         [parameter(Mandatory = $false)]
         [int] $MillisecondsTimeout = 5000,
 
@@ -19,10 +22,7 @@ function Synchronized
 
         [parameter(Mandatory = $false)]
         [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global",
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock
+        [Object[]] $Scope = "Global"
     )
 
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")

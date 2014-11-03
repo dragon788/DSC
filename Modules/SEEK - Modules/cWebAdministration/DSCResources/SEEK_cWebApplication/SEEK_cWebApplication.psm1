@@ -1,5 +1,45 @@
 Import-Module WebAdministration
 
+function Synchronized
+{
+    [CmdletBinding()]
+    param
+    (
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern("^[^\\]?")]
+        [parameter(Mandatory = $true)]
+        [string] $Name,
+
+        [parameter(Mandatory = $true)]
+        [ScriptBlock] $ScriptBlock,
+
+        [parameter(Mandatory = $false)]
+        [int] $MillisecondsTimeout = 5000,
+
+        [parameter(Mandatory = $false)]
+        [boolean] $InitiallyOwned = $false,
+
+        [parameter(Mandatory = $false)]
+        [Object[]] $ArgumentList = @(),
+
+        [parameter(Mandatory = $false)]
+        [ValidateSet("Global","Local","Session")]
+        [Object[]] $Scope = "Global"
+    )
+
+    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
+    
+    if ($mutex.WaitOne($MillisecondsTimeout)) {
+        try {
+            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+        }
+        finally {
+            $mutex.ReleaseMutex()
+        }
+    }
+    else { throw "Cannot aquire mutex: $Name"}
+}
+
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -75,6 +115,7 @@ function Set-TargetResource
     if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
     $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
+    $webappPath = "IIS:\Sites\${Website}\${Name}"
     if ($Ensure -eq "Present")
     {
 
@@ -88,19 +129,30 @@ function Set-TargetResource
             if ($webApplication.physicalPath -ne $PhysicalPath)
             {
                 Write-Verbose "Updating physical path for Web application $Name."
-                Set-ItemProperty -Path IIS:Sites\$Website\$Name -Name physicalPath -Value $PhysicalPath
+                Synchronized -Name "IIS" -ArgumentList $webappPath, $physicalPath -ScriptBlock {
+                    param($path, $physicalPath)
+                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+                }
             }
             if ($webApplication.applicationPool -ne $ApplicationPool)
             {
                 Write-Verbose "Updating physical path for Web application $Name."
-                Set-ItemProperty -Path IIS:Sites\$Website\$Name -Name applicationPool -Value $WebAppPool
+                Synchronized -Name "IIS" -ArgumentList $webappPath, $WebAppPool -ScriptBlock {
+                    param($path, $applicationPool)
+                    Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
+                }
             }
         }
 
         Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
         Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
 
-        if ($EnabledProtocols) { Set-ItemProperty "IIS:\Sites\${Website}\${Name}" -Name EnabledProtocols -Value $EnabledProtocols }
+        if ($EnabledProtocols) {
+            Synchronized -Name "IIS" -ArgumentList $webappPath, $EnabledProtocols -ScriptBlock {
+                param($path, $enabledProtocols)
+                Set-ItemProperty -Path $path -Name EnabledProtocols -Value $enabledProtocols
+            }
+        }
     }
     elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
     {
