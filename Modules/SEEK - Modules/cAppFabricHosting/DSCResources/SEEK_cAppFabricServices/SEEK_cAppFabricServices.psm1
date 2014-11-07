@@ -4,8 +4,9 @@ function Get-TargetResource
     [OutputType([System.Collections.Hashtable])]
     param
     (
-        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService"),
-        [Int]$Index = 0
+        [parameter(Mandatory = $true)]
+        [Int]$Index = 0,
+        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService")
     )
 
     $serviceStatuses = $Services | ForEach-Object {
@@ -13,25 +14,25 @@ function Get-TargetResource
     }
     if ($serviceStatuses.Contains("Stopped")) {
         return @{
+            Index = $Index
             Services = $Services
             Ensure = "Absent"
         }
     }
 
     return @{
+        Index = $Index
         Services = $Services
         Ensure = "Present"
     }
 }
 
-
 function Set-TargetResource {
     [CmdletBinding()]
     param (
-        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService"),
-
+        [parameter(Mandatory = $true)]
         [Int]$Index = 0,
-
+        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService"),
         [ValidateSet("Present","Absent")]
         [String]$Ensure = "Present"
     )
@@ -44,20 +45,18 @@ function Set-TargetResource {
     }
 }
 
-
 function Test-TargetResource {
     [CmdletBinding()]
     [OutputType([System.Boolean])]
     param (
-        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService"),
-
+        [parameter(Mandatory = $true)]
         [Int]$Index = 0,
-
+        [String[]]$Services = @("AppFabricWorkflowManagementService", "AppFabricEventCollectionService"),
         [ValidateSet("Present","Absent")]
         [String]$Ensure = "Present"
     )
 
-    $resource = Get-TargetResource -Services $Services
+    $resource = Get-TargetResource -Index $Index -Services $Services
 
     if($resource.Ensure -eq $Ensure)
     {
