@@ -57,7 +57,7 @@ function Set-TargetResource
         $argumentList = @('install', "-servicename:$Name")
 
         if ($Start -eq "true") { $argumentList += @('start')}
-        if ($AutoStart -eq "true") { $argumentList += @('--autostart')}
+        if ($AutoStart -eq "false") { $argumentList += @('--manual')}
     }
     else
     {
