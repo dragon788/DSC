@@ -1,0 +1,34 @@
+version: 1.0.{build}
+build_script:
+- ps: >-
+    $env:BUILD_NUMBER=$env:APPVEYOR_BUILD_NUMBER
+
+    .\build.ps1 Package
+test_script:
+- ps: >-
+    .\build.ps1 UnitTest
+
+    $build_success = $?
+
+
+    # upload results to AppVeyor
+
+    $wc = New-Object 'System.Net.WebClient'
+
+    $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\Test.xml))
+
+
+    if (-not $build_success) {
+      exit 1
+    }
+artifacts:
+- path: Output\Packages\*.nupkg
+  name: Chocolatey Package
+deploy:
+- provider: NuGet
+  server: http://chocolatey.org/
+  api_key:
+    secure: +r3+6RAp06eSq0Vr0sjrHLCKdyRo3WRpHf+ANR1U7VTbXCxNYu8ykL8LavMc9Mle
+- provider: NuGet
+  api_key:
+    secure: CX9G8eA/ROI4KCfHIl1cG0gLMaTI51+6PIFoYLNSsuVKCPUulCSL5xerxIqqSaw/
