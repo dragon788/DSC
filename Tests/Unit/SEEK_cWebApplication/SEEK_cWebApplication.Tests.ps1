@@ -87,7 +87,7 @@ Describe "Test-TargetResource" {
                 -ParameterFilter { ($Type -eq "Anonymous") }
             Mock Test-AuthenticationEnabled { return $true } `
                 -ParameterFilter { ($Type -eq "Windows") }
-            $authInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly -Property @{Anonymous="true";Basic="false";Digest="false";Windows="true"}
+            $authInfo = New-CimInstance -ClassName SEEK_cWebApplicationAuthenticationInformation -ClientOnly -Property @{Anonymous="true";Basic="false";Digest="false";Windows="true"}
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AuthenticationInfo $authInfo | Should Be $true
         }
 
@@ -96,7 +96,7 @@ Describe "Test-TargetResource" {
                 -ParameterFilter { ($Type -eq "Anonymous") }
             Mock Test-AuthenticationEnabled { return $false } `
                 -ParameterFilter { ($Type -eq "Windows") }
-            $authInfo = New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly -Property @{Anonymous="true";Basic="false";Digest="false";Windows="true"}
+            $authInfo = New-CimInstance -ClassName SEEK_cWebApplicationAuthenticationInformation -ClientOnly -Property @{Anonymous="true";Basic="false";Digest="false";Windows="true"}
             Test-TargetResource -Website "MySite" -Name "MyApp" -Ensure "Present" -WebAppPool "MyAppPool" -PhysicalPath "C:\App" -AuthenticationInfo $authInfo | Should Be $false
         }
     }

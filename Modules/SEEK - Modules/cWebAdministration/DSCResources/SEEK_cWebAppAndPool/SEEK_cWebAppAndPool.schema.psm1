@@ -36,7 +36,7 @@
             Website = $website
             WebAppPool =  $AppPoolName
             PhysicalPath = $PhysicalPath
-            AuthenticationInfo = SEEK_cWebAuthenticationInformation
+            AuthenticationInfo = SEEK_cWebApplicationAuthenticationInformation
                                 {
                                     Anonymous = $AuthenticationInfo.Anonymous
                                     Basic = $AuthenticationInfo.Basic
