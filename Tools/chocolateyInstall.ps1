@@ -8,9 +8,10 @@ try
 		cmd /c rmdir "$DSCResourcesRoot\SEEK - Modules"
 	}
 
-	# remove previous installation of this package
+	
 	Get-ChildItem $DSCResourceTarget | Foreach-Object {
 		if (Test-Path "$DSCResourcesRoot\$_") {
+			# remove previous installation of this package
 			cmd /c rmdir "$DSCResourcesRoot\$_"
 		}
 		cmd /c mklink /j "$DSCResourcesRoot\$_" "$DSCResourceTarget\$_"
