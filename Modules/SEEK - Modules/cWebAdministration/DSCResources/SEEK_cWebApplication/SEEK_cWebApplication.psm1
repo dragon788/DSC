@@ -1,5 +1,3 @@
-Import-Module WebAdministration
-
 function Synchronized
 {
     [CmdletBinding()]

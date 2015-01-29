@@ -1,5 +1,3 @@
-Import-Module WebAdministration
-
 data LocalizedData
 {
     # culture="en-US"

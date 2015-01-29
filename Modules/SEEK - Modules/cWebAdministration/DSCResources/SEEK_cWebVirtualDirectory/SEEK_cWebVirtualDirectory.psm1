@@ -1,5 +1,3 @@
-Import-Module WebAdministration
-
 $LogonMethodEnum = @("Batch","Interactive","Network","ClearText")
 
 function Synchronized
