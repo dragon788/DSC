@@ -1,7 +1,7 @@
 version: 1.0.{build}-{branch}
 build_script:
 - ps: >-
-    $env:BUILD_NUMBER=$env:APPVEYOR_BUILD_NUMBER
+    $env:VERSION=$env:APPVEYOR_BUILD_VERSION
 
     .\build.ps1 Package
 test_script:

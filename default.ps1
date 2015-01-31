@@ -5,16 +5,12 @@ properties {
   $outputModuleManifestDir = "${outputDir}\ModuleManifests"
   $modulesDir = ".\Modules\SEEK - Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
-  $version = "1.0.0"
-  $buildNumber = $env:BUILD_NUMBER
+  if ($env:VERSION) { $version = $env:VERSION } else { $version = "0.1.0-dev" }
 }
 
 task default -depends Clean, UnitTest
 
 task Package -depends Clean {
-  if ($buildNumber) {
-    $version = "${version}.${buildNumber}"
-  }
   if (-not (Test-Path $outputPackageDir)) {
     New-Item -ItemType directory -Path $outputPackageDir | Out-Null
   }
