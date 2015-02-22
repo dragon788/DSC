@@ -28,7 +28,7 @@ deploy:
 - provider: NuGet
   server: http://chocolatey.org/
   api_key:
-    secure: +r3+6RAp06eSq0Vr0sjrHLCKdyRo3WRpHf+ANR1U7VTbXCxNYu8ykL8LavMc9Mle
+    secure: +zfBtvqI0yIQodWvYBH7F0q8Mgjvlk4jswvEowSayB9LR4KaD36mkoEJHvRbY1TX
 - provider: NuGet
   api_key:
     secure: CX9G8eA/ROI4KCfHIl1cG0gLMaTI51+6PIFoYLNSsuVKCPUulCSL5xerxIqqSaw/
