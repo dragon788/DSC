@@ -5,7 +5,9 @@ properties {
   $outputModuleManifestDir = "${outputDir}\ModuleManifests"
   $modulesDir = ".\Modules\SEEK - Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
-  if ($env:VERSION) { $version = $env:VERSION } else { $version = "0.1.0-dev" }
+  $version = 0.1.0-dev
+  if ($env:BUILD_VERSION) { $version = 0.1.0-dev+build$env:BUILD_VERSION }
+  if ($env:RELEASE_TAG) { $version = $env:RELEASE_TAG }
 }
 
 task default -depends Clean, UnitTest
