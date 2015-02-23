@@ -7,7 +7,7 @@ properties {
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
   $version = "0.1.0-dev"
   if ($env:BUILD_VERSION) { $version = "2.0.0.${env:BUILD_VERSION}-alpha" }
-  if ($env:RELEASE_TAG) { $version = $env:RELEASE_TAG }
+  if ($env:RELEASE_TAG) { $version = ($env:RELEASE_TAG -replace "v(.+)", '$1') }
 }
 
 task default -depends Clean, UnitTest
