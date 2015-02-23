@@ -2,6 +2,7 @@ version: '{build}'
 build_script:
 - ps: >-
     $env:BUILD_VERSION=$env:APPVEYOR_BUILD_VERSION
+
     $env:RELEASE_TAG=$env:APPVEYOR_REPO_TAG_NAME
 
     .\build.ps1 Package
