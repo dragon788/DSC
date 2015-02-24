@@ -1,3 +1,6 @@
+# build requires IIS
+Install-WindowsFeature Web-Server
+
 # install packages required for build
 [Environment]::SetEnvironmentVariable("PATH", `
   "${PSScriptRoot}\.nuget\NuGet.CommandLine.2.8.2\tools;" + $env:PATH, "Process")
