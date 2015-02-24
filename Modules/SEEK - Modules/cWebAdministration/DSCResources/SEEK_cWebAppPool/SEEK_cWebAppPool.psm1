@@ -13,6 +13,8 @@ function Get-TargetResource
         $ApplicationName
     )
 
+    Confirm-Dependencies
+
     $AppPool = Get-AppPool($Name)
     if($AppPool -eq $null)
     {
@@ -83,6 +85,8 @@ function Set-TargetResource
         [System.String]
         $Password
     )
+
+    Confirm-Dependencies
 
     if($Ensure -eq "Absent")
     {
@@ -160,6 +164,9 @@ function Test-TargetResource
         [System.String]
         $Password
     )
+
+    Confirm-Dependencies
+
     $WebAppPool = Get-TargetResource -Name $Name -ApplicationName $ApplicationName
 
     if($Ensure -eq "Present")
@@ -202,6 +209,15 @@ function Execute-RequiredState([string] $Name, [string] $State)
     {
         Write-Verbose("Stopping the Web App Pool")
         Stop-WebAppPool -Name $Name
+    }
+}
+
+function Confirm-Dependencies
+{
+    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    {
+        Throw "Please ensure that the WebAdministration module is installed."
     }
 }
 
