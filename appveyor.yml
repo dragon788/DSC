@@ -28,7 +28,7 @@ artifacts:
   name: Chocolatey Package
 deploy:
 - provider: NuGet
-  server: http://chocolatey.org/
+  server: https://chocolatey.org/
   api_key:
     secure: +zfBtvqI0yIQodWvYBH7F0q8Mgjvlk4jswvEowSayB9LR4KaD36mkoEJHvRbY1TX
   skip_symbols: true
