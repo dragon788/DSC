@@ -1,5 +1,3 @@
-Import-Module WebAdministration
-
 function Synchronized
 {
     [CmdletBinding()]
@@ -28,7 +26,7 @@ function Synchronized
     )
 
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-    
+
     if ($mutex.WaitOne($MillisecondsTimeout)) {
         try {
             Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
@@ -416,6 +414,15 @@ function select-FromCimBindingsWithoutCimBindings
     param($from, $without)
 
     $from | Where-Object { -not (containsCimBinding $without $_) }
+}
+
+function Confirm-Dependencies
+{
+    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    {
+        Throw "Please ensure that the WebAdministration module is installed."
+    }
 }
 
 Export-ModuleMember -Function *-TargetResource
