@@ -46,7 +46,7 @@ function Synchronized
     )
 
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-    
+
     if ($mutex.WaitOne($MillisecondsTimeout)) {
         try {
             Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
@@ -69,6 +69,8 @@ function Get-TargetResource
         [ValidateNotNullOrEmpty()]
         [string]$Name
     )
+
+        Confirm-Dependencies
 
         $getTargetResourceResult = $null;
 
@@ -171,6 +173,8 @@ function Set-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
+
+    Confirm-Dependencies
 
     $getTargetResourceResult = $null;
 
@@ -460,6 +464,8 @@ function Test-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
+
+    Confirm-Dependencies
 
     $DesiredConfigurationMatch = $true;
 
@@ -1199,6 +1205,15 @@ function Get-SslFlags
     $sslFlags = Get-WebConfiguration -PSPath IIS:\Sites -Location $Location -Filter 'system.webserver/security/access' | % { $_.sslFlags }
     $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
     return $sslFlags
+}
+
+function Confirm-Dependencies
+{
+    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    {
+        Throw "Please ensure that the WebAdministration module is installed."
+    }
 }
 
 #endregion

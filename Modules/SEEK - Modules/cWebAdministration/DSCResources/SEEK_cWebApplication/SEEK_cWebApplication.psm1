@@ -26,7 +26,7 @@ function Synchronized
     )
 
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-    
+
     if ($mutex.WaitOne($MillisecondsTimeout)) {
         try {
             Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
@@ -50,6 +50,8 @@ function Get-TargetResource
         [parameter(Mandatory = $true)]
         [System.String]$Name
     )
+
+    Confirm-Dependencies
 
     $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
     if ($webApplication -ne $null)
@@ -109,6 +111,8 @@ function Set-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
+
+    Confirm-Dependencies
 
     if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
@@ -191,6 +195,8 @@ function Test-TargetResource
 
         [Microsoft.Management.Infrastructure.CimInstance]$AuthenticationInfo
     )
+
+    Confirm-Dependencies
 
     if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
@@ -381,6 +387,16 @@ function Get-SslFlags
     $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
     return $sslFlags
 }
+
+function Confirm-Dependencies
+{
+    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    {
+        Throw "Please ensure that the WebAdministration module is installed."
+    }
+}
+
 
 Export-ModuleMember -Function *-TargetResource
 

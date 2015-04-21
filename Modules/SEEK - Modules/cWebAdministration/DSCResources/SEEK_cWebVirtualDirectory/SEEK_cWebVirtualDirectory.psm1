@@ -27,8 +27,10 @@ function Synchronized
         [Object[]] $Scope = "Global"
     )
 
+    Confirm-Dependencies
+
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-    
+
     if ($mutex.WaitOne($MillisecondsTimeout)) {
         try {
             Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
@@ -57,6 +59,8 @@ function Get-TargetResource
         [System.String]
         $Name
     )
+
+    Confirm-Dependencies
 
     if (test-VirtualDirectoryExists $WebSite $Name $WebApplication)
     {
@@ -121,6 +125,8 @@ function Set-TargetResource
         [System.String]
         $Ensure = "Present"
     )
+
+    Confirm-Dependencies
 
     $virtualDirectory = Get-TargetResource -Website $Website -Name $Name -WebApplication $WebApplication
 
@@ -263,6 +269,15 @@ function test-VirtualDirectoryExists
     $virtualDirectory = Get-Item -Path $virtualDirectoryPath
 
     $virtualDirectory.PhysicalPath -ne $null
+}
+
+function Confirm-Dependencies
+{
+    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    {
+        Throw "Please ensure that the WebAdministration module is installed."
+    }
 }
 
 Export-ModuleMember -Function *-TargetResource
