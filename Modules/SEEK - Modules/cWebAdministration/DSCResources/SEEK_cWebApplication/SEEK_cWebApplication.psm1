@@ -304,7 +304,7 @@ function Get-AuthenticationInfo
         $authenticationProperties[$type] = [string](Test-AuthenticationEnabled -Website $Website -ApplicationName $Name -Type $type)
     }
 
-    return New-CimInstance -ClassName SEEK_cWebAuthenticationInformation -ClientOnly -Property $authenticationProperties
+    return New-CimInstance -ClassName SEEK_cWebApplicationAuthenticationInformation -ClientOnly -Property $authenticationProperties
 }
 
 function Test-AuthenticationInfo
@@ -364,7 +364,7 @@ function Set-AuthenticationInfo
 
 function Get-DefaultAuthenticationInfo
 {
-    New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
+    New-CimInstance -ClassName SEEK_cWebApplicationAuthenticationInformation `
         -ClientOnly `
         -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
 }

@@ -70,7 +70,7 @@ Configuration TestConfiguration
             WebAppPool = "Test"
             PhysicalPath = "C:\Temp\TestApplication"
             Ensure = "Present"
-            AuthenticationInfo = SEEK_cWebAuthenticationInformation
+            AuthenticationInfo = SEEK_cWebApplicationAuthenticationInformation
                                 {
                                     Anonymous = "true"
                                     Basic = "false"
