@@ -1,14 +1,17 @@
 version: '{build}'
+install:
+- cinst pester -version 2.1.0
+- cinst psake
 build_script:
 - ps: >-
     $env:BUILD_VERSION=$env:APPVEYOR_BUILD_VERSION
 
     $env:RELEASE_TAG=$env:APPVEYOR_REPO_TAG_NAME
 
-    .\build.ps1 Package
+    psake Package
 test_script:
 - ps: >-
-    .\build.ps1 UnitTest
+    psake UnitTest
 
     $build_success = $?
 
