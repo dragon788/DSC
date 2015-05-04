@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cSoftware" exclude="*.nuspec;cSoftware.psd1"/>
-    <file src="..\..\..\Tools\**" target="tools" />
-    <file src="..\..\..\Output\ModuleManifests\cSoftware.psd1" target="lib\cSoftware" />
+    <file src="..\..\Tools\**" target="tools" />
+    <file src="..\..\Output\ModuleManifests\cSoftware.psd1" target="lib\cSoftware" />
   </files>
 </package>
