@@ -1,7 +1,8 @@
 version: '{build}'
 install:
-- cinst pester -y
-- cinst psake -y
+- choco upgrade chocolatey -y
+- choco install pester -y
+- choco install psake -y
 build_script:
 - ps: >-
     $env:BUILD_VERSION=$env:APPVEYOR_BUILD_VERSION
