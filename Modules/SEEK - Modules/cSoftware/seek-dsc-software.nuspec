@@ -9,7 +9,7 @@
     <description>Custom DSC Resources for installing and uninstalling software packages and updates</description>
     <projectUrl>https://github.com/SEEK-Jobs/DSC</projectUrl>
     <tags>admin DSC</tags>
-    <copyright>© SEEK 2014. All rights reserved.</copyright>
+    <copyright>© SEEK 2015. All rights reserved.</copyright>
     <licenseUrl>http://www.seek.com.au/terms</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes></releaseNotes>

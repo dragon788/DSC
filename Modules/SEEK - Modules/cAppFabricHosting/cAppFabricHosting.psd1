@@ -12,7 +12,7 @@ Author = 'SEEK Ltd.'
 CompanyName = 'SEEK Ltd.'
 
 # Copyright statement for this module
-Copyright = '(c) 2014 SEEK Ltd. All rights reserved.'
+Copyright = '(c) 2015 SEEK Ltd. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Custom DSC Resources for hosting applications with AppFabric'
