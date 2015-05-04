@@ -3,7 +3,7 @@ properties {
   $outputDir = ".\Output"
   $outputPackageDir = "${outputDir}\Packages"
   $outputModuleManifestDir = "${outputDir}\ModuleManifests"
-  $modulesDir = ".\Modules\SEEK - Modules"
+  $modulesDir = ".\Modules"
   $dscResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
   $version = "0.1.0-dev"
   if ($env:BUILD_VERSION) { $version = "1.0.0.${env:BUILD_VERSION}-alpha" }

@@ -1,6 +1,6 @@
 [Environment]::SetEnvironmentVariable("PSModulePath", "${PSScriptRoot}\Modules;" + $env:PSModulePath, "Process")
 
-$module = Join-Path $PSScriptRoot "..\..\..\Modules\SEEK - Modules\cAppFabricHosting\DSCResources\SEEK_cAppFabricServices\SEEK_cAppFabricServices.psm1"
+$module = Join-Path $PSScriptRoot "..\..\..\Modules\cAppFabricHosting\DSCResources\SEEK_cAppFabricServices\SEEK_cAppFabricServices.psm1"
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 

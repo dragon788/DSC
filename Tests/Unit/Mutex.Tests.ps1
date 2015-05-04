@@ -1,4 +1,4 @@
-$module = Join-Path $PSScriptRoot "..\..\Modules\SEEK - Modules\cWebAdministration\Mutex.psm1"
+$module = Join-Path $PSScriptRoot "..\..\Modules\cWebAdministration\Mutex.psm1"
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 
