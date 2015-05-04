@@ -19,7 +19,7 @@ task Package -depends Clean {
   Get-ChildItem *.nuspec -Recurse | Foreach-Object {
     Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
     # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
-    exec { cpack "$($_.FullName) -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
+    exec { choco pack "$($_.FullName) -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
   }
 }
 
