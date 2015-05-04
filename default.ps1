@@ -16,10 +16,11 @@ task Package -depends Clean {
   if (-not (Test-Path $outputPackageDir)) {
     New-Item -ItemType directory -Path $outputPackageDir | Out-Null
   }
-  Get-ChildItem *.nuspec -Recurse | Foreach-Object {
+  Get-ChildItem "*.nuspec" -Recurse | Foreach-Object {
     Update-ModuleManifestVersion -Path $_.DirectoryName -Version $version -OutputDir $outputModuleManifestDir
-    # chocolatey pack expects a package name argument only, quotes are necessary to inject the additional OutputDir argument
-    exec { choco pack "$($_.FullName) -OutputDir $(Resolve-Path $outputPackageDir) -Version $version" }
+    Set-Location $outputPackageDir
+    exec { choco pack $($_.FullName) -Version $version }
+    Set-Location $PSScriptRoot
   }
 }
 
