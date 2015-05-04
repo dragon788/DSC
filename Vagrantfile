@@ -19,9 +19,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.gui = true
     vb.customize ["modifyvm", :id, "--memory",  "2048"]
     vb.customize ["modifyvm", :id, "--cpus",    "2"]
+    vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
   end
 
   config.vm.provision "shell", inline: "iex ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))"
-  config.vm.provision "shell", inline: "choco install pester -y -version 2.1.0"
+  config.vm.provision "shell", inline: "choco install pester -y"
   config.vm.provision "shell", inline: "choco install psake -y"
+  config.vm.provision "shell", inline: "Install-WindowsFeature -Name Web-Server -IncludeAllSubFeature"
 end

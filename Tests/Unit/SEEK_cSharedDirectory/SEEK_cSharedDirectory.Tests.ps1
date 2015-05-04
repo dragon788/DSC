@@ -1,166 +1,165 @@
-$module = Join-Path $PSScriptRoot "..\..\..\Modules\cHardDisk\DSCResources\SEEK_cSharedDirectory\SEEK_cSharedDirectory.psm1"
-$code = Get-Content $module | Out-String
-Invoke-Expression $code
+Import-Module(Join-Path $PSScriptRoot "..\..\..\Modules\cHardDisk\DSCResources\SEEK_cSharedDirectory\SEEK_cSharedDirectory.psm1")
 
-Describe "Get-TargetResource" {
-    $shares = @(
-        @{Path = "another-share-path"}
-        @{Path = "target-share-path"}
-    )
+InModuleScope "SEEK_cSharedDirectory" {
+    Describe "Get-TargetResource" {
+        $shares = @(
+            @{Path = "another-share-path"}
+            @{Path = "target-share-path"}
+        )
 
-    Context "when the shared directory exists" {
-        Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
+        Context "when the shared directory exists" {
+            Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
 
-        $targetResource = Get-TargetResource -Path "target-share-path"
+            $targetResource = Get-TargetResource -Path "target-share-path"
 
-        It "ensure is present" {
-            $targetResource.Ensure | Should Be "Present"
+            It "ensure is present" {
+                $targetResource.Ensure | Should Be "Present"
+            }
+
+            It "the shared directory matches that requested" {
+                $targetResource.SharedDirectory.Path | Should Be "target-share-path"
+            }
         }
 
-        It "the shared directory matches that requested" {
-            $targetResource.SharedDirectory.Path | Should Be "target-share-path"
+        Context "when the shared directory does not exsit" {
+            Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
+
+            $targetResource = Get-TargetResource -Path "not-a-share-path"
+
+            It "ensure is absent" {
+                $targetResource.Ensure | Should Be "Absent"
+            }
+
+            It "the shared directory is null" {
+                $targetResource.SharedDirectory | Should Be $null
+            }
+        }
+
+        Context "in all cases" {
+            Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
+
+            It "checks the system for shared directories" {
+                Get-TargetResource -Path "another-path"
+                Assert-VerifiableMocks
+            }
         }
     }
 
-    Context "when the shared directory does not exsit" {
-        Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
+    Describe "Test-TargetResource" {
+        $shares = @(
+            @{Path = "another-share-path"}
+            @{Path = "target-share-path"}
+        )
 
-        $targetResource = Get-TargetResource -Path "not-a-share-path"
+        Context "when the shared directory exists" {
+            Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
 
-        It "ensure is absent" {
-            $targetResource.Ensure | Should Be "Absent"
+            It "is true" {
+                Test-TargetResource -Path "target-share-path" | Should Be $true
+            }
         }
 
-        It "the shared directory is null" {
-            $targetResource.SharedDirectory | Should Be $null
+        Context "when the shared directory does not exsit" {
+            Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
+
+            It "is false" {
+                Test-TargetResource -Path "not-a-share-path" | Should Be $false
+            }
+        }
+
+        Context "in all cases" {
+            Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
+
+            It "checks the system for shared directories" {
+                Test-TargetResource -Path "another-path"
+                Assert-VerifiableMocks
+            }
         }
     }
 
-    Context "in all cases" {
-        Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
+    Describe "Set-TargetResource" {
 
-        It "checks the system for shared directories" {
-            Get-TargetResource -Path "another-path"
-            Assert-VerifiableMocks
+        $targetPath = "target-share-path"
+        $targetDescription = "description"
+
+        $create =
+        {
+            param($path, $description, $type)
+            $this.Result = $path -eq $targetPath -and $description -eq $targetDescription -and $type -eq 0
+        }
+
+        $shares = New-Object -TypeName PSObject
+        $shares | Add-Member -NotePropertyName Result -NotePropertyValue $false
+        $shares | Add-Member -MemberType ScriptMethod -Name Create -Value $create
+
+        $acl = New-Object -TypeName PSObject
+        $acl | Add-Member -MemberType ScriptMethod -Name SetAccessRule -Value {}
+
+        $accessControlItem = New-Object -TypeName PSObject
+        $accessControlItem | Add-Member -MemberType ScriptMethod -Name GetAccessControl -Value { $acl }
+
+        Mock Get-Item { $accessControlItem }
+
+        Mock New-Object {} -ParameterFilter { $TypeName -eq "System.Security.AccessControl.FileSystemAccessRule" }
+
+        Context "when desired state is present, and the path does not exist" {
+            Mock Test-Path { $false } -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
+
+            Mock Set-Acl {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Set-TargetResource -Path $targetPath -Description $targetDescription
+
+            It "creates the directory and sets the permissions" {
+                Assert-VerifiableMocks
+            }
+
+            It "shares the directory" {
+                $shares.Result | should be $true
+            }
+        }
+
+        Context "when the desired state is present, and the path exists" {
+            $shares.Result = $false
+
+            Mock Test-Path { $true } -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Mock New-Item {}
+            Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
+
+            Mock Set-Acl {} -ParameterFilter { $Path -eq $targetPath }
+            Set-TargetResource -Path $targetPath -Description $targetDescription
+
+            It "does not create the directory" {
+                Assert-MockCalled New-Item -Times 0
+            }
+
+            It "shares the directory" {
+                $shares.Result | should be $true
+            }
+
+            It "sets the permissions" {
+                Assert-VerifiableMocks
+            }
+        }
+
+        Context "when desired state is absent, and the path exists" {
+            Mock Test-Path { $true } -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Mock Remove-Item {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
+            Set-TargetResource -Ensure "Absent" -Path $targetPath -Description $targetDescription
+
+            It "deletes the shared directory" {
+                Assert-VerifiableMocks
+            }
+        }
+
+        Context "when desired state is absent, and the path does not exist" {
+            Mock Test-Path { $false } -ParameterFilter { $Path -eq $targetPath }
+            Mock Remove-Item {}
+            Set-TargetResource -Ensure "Absent" -Path $targetPath -Description $targetDescription
+
+            It "does not attempt to delete the shared directory" {
+                Assert-MockCalled Remove-Item -Times 0
+            }
         }
     }
 }
-
-Describe "Test-TargetResource" {
-    $shares = @(
-        @{Path = "another-share-path"}
-        @{Path = "target-share-path"}
-    )
-
-    Context "when the shared directory exists" {
-        Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
-
-        It "is true" {
-            Test-TargetResource -Path "target-share-path" | Should Be $true
-        }
-    }
-
-    Context "when the shared directory does not exsit" {
-        Mock Get-WmiObject { $shares } -ParameterFilter { $Class -eq "Win32_Share" }
-
-        It "is false" {
-            Test-TargetResource -Path "not-a-share-path" | Should Be $false
-        }
-    }
-
-    Context "in all cases" {
-        Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
-
-        It "checks the system for shared directories" {
-            Test-TargetResource -Path "another-path"
-            Assert-VerifiableMocks
-        }
-    }
-}
-
-Describe "Set-TargetResource" {
-
-    $targetPath = "target-share-path"
-    $targetDescription = "description"
-
-    $create =
-    {
-        param($path, $description, $type)
-        $this.Result = $path -eq $targetPath -and $description -eq $targetDescription -and $type -eq 0
-    }
-
-    $shares = New-Object -TypeName PSObject
-    $shares | Add-Member -NotePropertyName Result -NotePropertyValue $false
-    $shares | Add-Member -MemberType ScriptMethod -Name Create -Value $create
-
-    $acl = New-Object -TypeName PSObject
-    $acl | Add-Member -MemberType ScriptMethod -Name SetAccessRule -Value {}
-
-    $accessControlItem = New-Object -TypeName PSObject
-    $accessControlItem | Add-Member -MemberType ScriptMethod -Name GetAccessControl -Value { $acl }
-
-    Mock Get-Item { $accessControlItem }
-
-    Mock New-Object {} -ParameterFilter { $TypeName -eq "System.Security.AccessControl.FileSystemAccessRule" }
-
-    Context "when desired state is present, and the path does not exist" {
-        Mock Test-Path { $false } -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Mock New-Item {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
-
-        Mock Set-Acl {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Set-TargetResource -Path $targetPath -Description $targetDescription
-
-        It "creates the directory and sets the permissions" {
-            Assert-VerifiableMocks
-        }
-
-        It "shares the directory" {
-            $shares.Result | should be $true
-        }
-    }
-
-    Context "when the desired state is present, and the path exists" {
-        $shares.Result = $false
-
-        Mock Test-Path { $true } -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Mock New-Item {}
-        Mock Get-WmiObject { $shares } -Verifiable -ParameterFilter { $Class -eq "Win32_Share" }
-
-        Mock Set-Acl {} -ParameterFilter { $Path -eq $targetPath }
-        Set-TargetResource -Path $targetPath -Description $targetDescription
-
-        It "does not create the directory" {
-            Assert-MockCalled New-Item -Times 0
-        }
-
-        It "shares the directory" {
-            $shares.Result | should be $true
-        }
-
-        It "sets the permissions" {
-            Assert-VerifiableMocks
-        }
-    }
-
-    Context "when desired state is absent, and the path exists" {
-        Mock Test-Path { $true } -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Mock Remove-Item {} -Verifiable -ParameterFilter { $Path -eq $targetPath }
-        Set-TargetResource -Ensure "Absent" -Path $targetPath -Description $targetDescription
-
-        It "deletes the shared directory" {
-            Assert-VerifiableMocks
-        }
-    }
-
-    Context "when desired state is absent, and the path does not exist" {
-        Mock Test-Path { $false } -ParameterFilter { $Path -eq $targetPath }
-        Mock Remove-Item {}
-        Set-TargetResource -Ensure "Absent" -Path $targetPath -Description $targetDescription
-
-        It "does not attempt to delete the shared directory" {
-            Assert-MockCalled Remove-Item -Times 0
-        }
-    }
-}
-

@@ -1,6 +1,6 @@
 version: '{build}'
 install:
-- cinst pester -y -version 2.1.0
+- cinst pester -y
 - cinst psake -y
 build_script:
 - ps: >-
