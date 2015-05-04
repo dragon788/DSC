@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" target="lib\cWebAdministration" exclude="*.nuspec;cWebAdministration.psd1"/>
+    <file src="**" exclude="*.nuspec;SEEK_cWebAdministration.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cWebAdministration.psd1" target="lib\cWebAdministration" />
+    <file src="..\..\Output\ModuleManifests\SEEK_cWebAdministration.psd1" />
   </files>
 </package>

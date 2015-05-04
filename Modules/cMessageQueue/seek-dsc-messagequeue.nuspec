@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" target="lib\cMessageQueue" exclude="*.nuspec;cMessageQueue.psd1"/>
+    <file src="**" exclude="*.nuspec;SEEK_cMessageQueue.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cMessageQueue.psd1" target="lib\cMessageQueue" />
+    <file src="..\..\Output\ModuleManifests\SEEK_cMessageQueue.psd1" />
   </files>
 </package>

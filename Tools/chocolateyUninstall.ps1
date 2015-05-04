@@ -1,7 +1,7 @@
 try
 {
 	$DSCResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
-	$DSCResourceTarget = Join-Path $env:chocolateyPackageFolder "lib"
+	$DSCResourceTarget = Join-Path $env:chocolateyPackageFolder "DSCResources"
 	Get-ChildItem $DSCResourceTarget | Foreach-Object { cmd /c rmdir "$DSCResourcesRoot\$_" }
 } catch {
     throw $_.Exception

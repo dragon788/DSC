@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" target="lib\cNServiceBus" exclude="*.nuspec;cNServiceBus.psd1"/>
+    <file src="**" exclude="*.nuspec;SEEK_cNServiceBus.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cNServiceBus.psd1" target="lib\cNServiceBus" />
+    <file src="..\..\Output\ModuleManifests\SEEK_cNServiceBus.psd1" />
   </files>
 </package>
