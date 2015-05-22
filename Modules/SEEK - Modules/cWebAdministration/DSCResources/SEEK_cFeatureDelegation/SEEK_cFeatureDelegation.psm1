@@ -78,7 +78,7 @@ function Confirm-Dependencies
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
-    Import-Module WebAdministration | Out-Null
+    Import-Module WebAdministration
 }
 
 
