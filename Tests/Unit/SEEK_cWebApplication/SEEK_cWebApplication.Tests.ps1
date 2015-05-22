@@ -10,6 +10,9 @@ $MockWebApplication = New-Object PSObject
 $MockWebApplication | Add-Member PhysicalPath "C:\App"
 $MockWebApplication | Add-Member ApplicationPool "MyAppPool"
 
+function Start-ASApplication { param([string]$SiteName) }
+function Stop-ASApplication { param([string]$SiteName) }
+
 Describe "Get-TargetResource" {
     Mock Get-WebConfiguration
 

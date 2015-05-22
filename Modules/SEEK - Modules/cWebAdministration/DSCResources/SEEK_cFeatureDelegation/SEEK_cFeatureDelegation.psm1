@@ -63,7 +63,7 @@ function Set-TargetResource
 
     if($Ensure -eq "Absent") {
         $overrideMode = "Deny"
-    } 
+    }
     else {
         $overrideMode = "Allow"
     }

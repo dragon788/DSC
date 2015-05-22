@@ -113,54 +113,63 @@ function Set-TargetResource
     )
 
     Confirm-Dependencies
+    Stop-AppFabricApplicationServer -SiteName $Website
 
-    if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
-
-    $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
-    $webappPath = "IIS:\Sites\${Website}\${Name}"
-    if ($Ensure -eq "Present")
+    try
     {
+        if ($AuthenticationInfo -eq $null) { $AuthenticationInfo = Get-DefaultAuthenticationInfo }
 
-        if ($webApplication -eq $null)
+        $webApplication = Find-UniqueWebApplication -Site $Website -Name $Name
+        $webappPath = "IIS:\Sites\${Website}\${Name}"
+        if ($Ensure -eq "Present")
         {
-            Write-Verbose "Creating new Web application $Name."
-            New-WebApplication -Site $Website -Name $Name -PhysicalPath $PhysicalPath -ApplicationPool $WebAppPool
-        }
-        else
-        {
-            if ($webApplication.physicalPath -ne $PhysicalPath)
+
+            if ($webApplication -eq $null)
             {
-                Write-Verbose "Updating physical path for Web application $Name."
-                Synchronized -Name "IIS" -ArgumentList $webappPath, $physicalPath -ScriptBlock {
-                    param($path, $physicalPath)
-                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+                Write-Verbose "Creating new Web application $Name."
+                New-WebApplication -Site $Website -Name $Name -PhysicalPath $PhysicalPath -ApplicationPool $WebAppPool
+            }
+            else
+            {
+                if ($webApplication.physicalPath -ne $PhysicalPath)
+                {
+                    Write-Verbose "Updating physical path for Web application $Name."
+                    Synchronized -Name "IIS" -ArgumentList $webappPath, $physicalPath -ScriptBlock {
+                        param($path, $physicalPath)
+                        Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+                    }
+                }
+                if ($webApplication.applicationPool -ne $ApplicationPool)
+                {
+                    Write-Verbose "Updating physical path for Web application $Name."
+                    Synchronized -Name "IIS" -ArgumentList $webappPath, $WebAppPool -ScriptBlock {
+                        param($path, $applicationPool)
+                        Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
+                    }
                 }
             }
-            if ($webApplication.applicationPool -ne $ApplicationPool)
-            {
-                Write-Verbose "Updating physical path for Web application $Name."
-                Synchronized -Name "IIS" -ArgumentList $webappPath, $WebAppPool -ScriptBlock {
-                    param($path, $applicationPool)
-                    Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
+
+            Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
+            Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
+
+            if ($EnabledProtocols) {
+                Synchronized -Name "IIS" -ArgumentList $webappPath, $EnabledProtocols -ScriptBlock {
+                    param($path, $enabledProtocols)
+                    Set-ItemProperty -Path $path -Name EnabledProtocols -Value $enabledProtocols
                 }
             }
         }
-
-        Set-AuthenticationInfo -Website $Website -ApplicationName $Name -AuthenticationInfo $AuthenticationInfo -ErrorAction Stop
-        Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
-
-        if ($EnabledProtocols) {
-            Synchronized -Name "IIS" -ArgumentList $webappPath, $EnabledProtocols -ScriptBlock {
-                param($path, $enabledProtocols)
-                Set-ItemProperty -Path $path -Name EnabledProtocols -Value $enabledProtocols
-            }
+        elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
+        {
+            Write-Verbose "Removing existing Web Application $Name."
+            Remove-WebApplication -Site $Website -Name $Name
         }
     }
-    elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
+    finally
     {
-        Write-Verbose "Removing existing Web Application $Name."
-        Remove-WebApplication -Site $Website -Name $Name
+        Start-AppFabricApplicationServer -SiteName $Website
     }
+
 }
 
 
@@ -386,6 +395,42 @@ function Get-SslFlags
     $sslFlags = Get-WebConfiguration -PSPath IIS:\Sites -Location $Location -Filter 'system.webserver/security/access' | % { $_.sslFlags }
     $sslFlags = if ($sslFlags -eq $null) { "" } else { $sslFlags }
     return $sslFlags
+}
+
+function Stop-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Stop-ASApplication -SiteName $SiteName
+    }
+}
+
+function Start-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Start-ASApplication -SiteName $SiteName
+    }
 }
 
 function Confirm-Dependencies

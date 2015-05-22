@@ -27,8 +27,6 @@ function Synchronized
         [Object[]] $Scope = "Global"
     )
 
-    Confirm-Dependencies
-
     $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
 
     if ($mutex.WaitOne($MillisecondsTimeout)) {
@@ -127,43 +125,51 @@ function Set-TargetResource
     )
 
     Confirm-Dependencies
+    Stop-AppFabricApplicationServer -SiteName $Website
 
-    $virtualDirectory = Get-TargetResource -Website $Website -Name $Name -WebApplication $WebApplication
-
-    if ($Ensure -eq "Present")
+    try
     {
-        $path = Get-VirtualDirectoryPath -Site $Website -Application $WebApplication -Name $Name
+        $virtualDirectory = Get-TargetResource -Website $Website -Name $Name -WebApplication $WebApplication
 
-        if ($virtualDirectory.Ensure -eq "Absent")
+        if ($Ensure -eq "Present")
         {
-            Write-Verbose "Creating new Web Virtual Directory $Name."
-            New-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name -PhysicalPath $PhysicalPath
-        }
-        else
-        {
-            Write-Verbose "Updating physical path for web virtual directory $Name."
-            Synchronized -Name "IIS" -ArgumentList $path, $PhysicalPath {
-                param($path, $physicalPath)
-                Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+            $path = Get-VirtualDirectoryPath -Site $Website -Application $WebApplication -Name $Name
+
+            if ($virtualDirectory.Ensure -eq "Absent")
+            {
+                Write-Verbose "Creating new Web Virtual Directory $Name."
+                New-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name -PhysicalPath $PhysicalPath
+            }
+            else
+            {
+                Write-Verbose "Updating physical path for web virtual directory $Name."
+                Synchronized -Name "IIS" -ArgumentList $path, $PhysicalPath {
+                    param($path, $physicalPath)
+                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+                }
+            }
+
+            Synchronized -Name "IIS" -ArgumentList $path, ($LogonMethodEnum.IndexOf($LogonMethod)) {
+                param($path, $logonMethod)
+                Set-ItemProperty -Path $path -Name logonMethod -Value $logonMethod
+            }
+
+             Synchronized -Name "IIS" -ArgumentList $path, $Username, $Password {
+                param($path, $username, $password)
+                Set-ItemProperty -Path $path -Name username -Value $username
+                Set-ItemProperty -Path $path -Name password -Value $password
             }
         }
 
-        Synchronized -Name "IIS" -ArgumentList $path, ($LogonMethodEnum.IndexOf($LogonMethod)) {
-            param($path, $logonMethod)
-            Set-ItemProperty -Path $path -Name logonMethod -Value $logonMethod
-        }
-
-         Synchronized -Name "IIS" -ArgumentList $path, $Username, $Password {
-            param($path, $username, $password)
-            Set-ItemProperty -Path $path -Name username -Value $username
-            Set-ItemProperty -Path $path -Name password -Value $password
+        if ($virtualDirectory.Ensure -eq "Present" -and $Ensure -eq "Absent")
+        {
+            Write-Verbose "Removing existing Virtual Directory $Name."
+            Remove-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name
         }
     }
-
-    if ($virtualDirectory.Ensure -eq "Present" -and $Ensure -eq "Absent")
+    finally
     {
-        Write-Verbose "Removing existing Virtual Directory $Name."
-        Remove-WebVirtualDirectory -Site $Website -Application $WebApplication -Name $Name
+        Start-AppFabricApplicationServer -SiteName $Website
     }
 }
 
@@ -269,6 +275,42 @@ function test-VirtualDirectoryExists
     $virtualDirectory = Get-Item -Path $virtualDirectoryPath
 
     $virtualDirectory.PhysicalPath -ne $null
+}
+
+function Stop-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Stop-ASApplication -SiteName $SiteName
+    }
+}
+
+function Start-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Start-ASApplication -SiteName $SiteName
+    }
 }
 
 function Confirm-Dependencies

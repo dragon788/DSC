@@ -48,6 +48,8 @@ function Get-TargetResource
         [System.String] $Site
     )
 
+    Confirm-Dependencies
+
     get-BindingsResource (get-BindingConfigElements $Site) $Site
 }
 
@@ -69,6 +71,8 @@ function Test-TargetResource
         [System.Boolean]
         $Clear = $false
     )
+
+    Confirm-Dependencies
 
     $currentCimBindings = get-CurrentCimBindings $Site
     $commonCimBindings = select-CommonCimBindings (new-CimBindingsWithBindingInformation $Bindings) $currentCimBindings
@@ -99,21 +103,30 @@ function Set-TargetResource
         $Clear = $false
     )
 
+    Confirm-Dependencies
+    Stop-AppFabricApplicationServer -SiteName $Site
 
+    try
+    {
+        $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
+        $sitePath = $("IIS:\Sites\${Site}")
+        Synchronized -Name "IIS" -ArgumentList $sitePath, (new-BindingsValue $newCimBindings) {
+            param($path, $bindings)
+            Set-ItemProperty -Path $path -Name bindings -Value $bindings
+        }
+        $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
-    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
-    $sitePath = $("IIS:\Sites\${Site}")
-    Synchronized -Name "IIS" -ArgumentList $sitePath, (new-BindingsValue $newCimBindings) {
-        param($path, $bindings)
-        Set-ItemProperty -Path $path -Name bindings -Value $bindings
+        $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
+        Synchronized -Name "IIS" -ArgumentList $sitePath, $protocols {
+            param($path, $enabledProtocols)
+            Set-ItemProperty $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
+        }
     }
-    $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
-
-    $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
-    Synchronized -Name "IIS" -ArgumentList $sitePath, $protocols {
-        param($path, $enabledProtocols)
-        Set-ItemProperty $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
+    finally
+    {
+        Start-AppFabricApplicationServer -SiteName $Site
     }
+
 }
 
 function New-CimBinding
@@ -414,6 +427,42 @@ function select-FromCimBindingsWithoutCimBindings
     param($from, $without)
 
     $from | Where-Object { -not (containsCimBinding $without $_) }
+}
+
+function Stop-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Stop-ASApplication -SiteName $SiteName
+    }
+}
+
+function Start-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    if(Get-Module -ListAvailable -Name ApplicationServer)
+    {
+        Import-Module ApplicationServer
+        Start-ASApplication -SiteName $SiteName
+    }
 }
 
 function Confirm-Dependencies

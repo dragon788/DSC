@@ -37,6 +37,9 @@ $MockHttpsBinding = New-Object PSObject -Property @{
     certificateStoreName = "Cert://localmachine/my"
 }
 
+function Start-ASApplication { param([string]$SiteName) }
+function Stop-ASApplication { param([string]$SiteName) }
+
 Describe "Get-TargetResource" {
     Mock Get-WebConfiguration
 
