@@ -18,46 +18,6 @@ WebsiteBindingConflictOnStartError = Website "{0}" could not be started due to b
 '@
 }
 
-function Synchronized
-{
-    [CmdletBinding()]
-    param
-    (
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern("^[^\\]?")]
-        [parameter(Mandatory = $true)]
-        [string] $Name,
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock,
-
-        [parameter(Mandatory = $false)]
-        [int] $MillisecondsTimeout = 5000,
-
-        [parameter(Mandatory = $false)]
-        [boolean] $InitiallyOwned = $false,
-
-        [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @(),
-
-        [parameter(Mandatory = $false)]
-        [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global"
-    )
-
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-
-    if ($mutex.WaitOne($MillisecondsTimeout)) {
-        try {
-            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        }
-        finally {
-            $mutex.ReleaseMutex()
-        }
-    }
-    else { throw "Cannot aquire mutex: $Name"}
-}
-
 # The Get-TargetResource cmdlet is used to fetch the status of role or Website on the target machine.
 # It gives the Website info of the requested role/feature on the target machine.
 function Get-TargetResource
@@ -216,10 +176,7 @@ function Set-TargetResource
             if(ValidateWebsitePath -Name $Name -PhysicalPath $PhysicalPath)
             {
                 $UpdateNotRequired = $false
-                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $physicalPath {
-                    param($path, $physicalPath)
-                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
-                }
+                Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name physicalPath -Value $physicalPath
                 Write-Verbose("Physical path for website $Name has been updated to $PhysicalPath");
             }
 
@@ -258,10 +215,7 @@ function Set-TargetResource
             if(($website.applicationPool -ne $ApplicationPool) -and ($ApplicationPool -ne ""))
             {
                 $UpdateNotRequired = $false
-                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $applicationPool {
-                    param($path, $applicationPool)
-                    Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
-                }
+                Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name applicationPool -Value $applicationPool
                 Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
             }
 
@@ -622,15 +576,12 @@ function UpdateHostFileEntry
             {
                 if ($HostEntryIPAddress -ne $null -and $HostEntryName -ne $null)
                 {
-                    Synchronized -Name [System.Uri]::EscapeDataString($hostsFile) -ArgumentList $hostFile, $HostEntryName, $HostEntryIPAddress -ScriptBlock {
-                        param($hostFile, $hostEntryName, $hostEntryIPAddress)
-                        if (-not (Select-String $hostFile -pattern "\s+${hostEntryName}\s*$"))
-                        {
-                            Add-Content $hostFile "`n$hostEntryIPAddress    $hostEntryName"
-                        }
-                        else {
-                            (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+${hostEntryName}\s*$", "$hostEntryIPAddress    $hostEntryName" } | Set-Content($hostFile)
-                        }
+                    if (-not (Select-String $hostFile -pattern "\s+${hostEntryName}\s*$"))
+                    {
+                        Add-Content $hostFile "`n$HostEntryIPAddress    $hostEntryName"
+                    }
+                    else {
+                        (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+${HostEntryName}\s*$", "$HostEntryIPAddress    $hostEntryName" } | Set-Content($hostFile)
                     }
                 }
             }
@@ -1011,10 +962,7 @@ function UpdateBindings
 
     #Enable all protocols specified in bindings
     $SiteEnabledProtocols = $BindingInfo  | Select-Object -ExpandProperty Protocol -Unique
-    Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $SiteEnabledProtocols {
-        param($path, $enabledProtocols)
-        Set-ItemProperty -Path $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
-    }
+    Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',')
 
     $bindingParams = @()
     foreach($binding in $BindingInfo)
@@ -1045,10 +993,7 @@ function UpdateBindings
 
     try
     {
-        Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $bindingParams {
-            param($path, $bindings)
-            Set-ItemProperty -Path $path -Name bindings -value $bindings
-        }
+        Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name bindings -value $bindingParams
     }
     Catch
     {

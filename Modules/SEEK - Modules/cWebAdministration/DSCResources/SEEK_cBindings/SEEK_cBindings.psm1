@@ -1,43 +1,3 @@
-function Synchronized
-{
-    [CmdletBinding()]
-    param
-    (
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern("^[^\\]?")]
-        [parameter(Mandatory = $true)]
-        [string] $Name,
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock,
-
-        [parameter(Mandatory = $false)]
-        [int] $MillisecondsTimeout = 5000,
-
-        [parameter(Mandatory = $false)]
-        [boolean] $InitiallyOwned = $false,
-
-        [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @(),
-
-        [parameter(Mandatory = $false)]
-        [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global"
-    )
-
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-
-    if ($mutex.WaitOne($MillisecondsTimeout)) {
-        try {
-            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        }
-        finally {
-            $mutex.ReleaseMutex()
-        }
-    }
-    else { throw "Cannot aquire mutex: $Name"}
-}
-
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -110,17 +70,11 @@ function Set-TargetResource
     {
         $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
         $sitePath = $("IIS:\Sites\${Site}")
-        Synchronized -Name "IIS" -ArgumentList $sitePath, (new-BindingsValue $newCimBindings) {
-            param($path, $bindings)
-            Set-ItemProperty -Path $path -Name bindings -Value $bindings
-        }
+        Set-ItemProperty -Path $sitePath -Name bindings -Value (new-BindingsValue $newCimBindings)
         $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
         $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
-        Synchronized -Name "IIS" -ArgumentList $sitePath, $protocols {
-            param($path, $enabledProtocols)
-            Set-ItemProperty $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
-        }
+        Set-ItemProperty $sitePath -Name EnabledProtocols -Value ($protocols -join ',')
     }
     finally
     {

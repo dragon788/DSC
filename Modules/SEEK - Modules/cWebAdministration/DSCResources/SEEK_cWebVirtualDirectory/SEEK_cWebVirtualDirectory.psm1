@@ -1,45 +1,5 @@
 $LogonMethodEnum = @("Batch","Interactive","Network","ClearText")
 
-function Synchronized
-{
-    [CmdletBinding()]
-    param
-    (
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern("^[^\\]?")]
-        [parameter(Mandatory = $true)]
-        [string] $Name,
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock,
-
-        [parameter(Mandatory = $false)]
-        [int] $MillisecondsTimeout = 5000,
-
-        [parameter(Mandatory = $false)]
-        [boolean] $InitiallyOwned = $false,
-
-        [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @(),
-
-        [parameter(Mandatory = $false)]
-        [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global"
-    )
-
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-
-    if ($mutex.WaitOne($MillisecondsTimeout)) {
-        try {
-            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        }
-        finally {
-            $mutex.ReleaseMutex()
-        }
-    }
-    else { throw "Cannot aquire mutex: $Name"}
-}
-
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -143,22 +103,13 @@ function Set-TargetResource
             else
             {
                 Write-Verbose "Updating physical path for web virtual directory $Name."
-                Synchronized -Name "IIS" -ArgumentList $path, $PhysicalPath {
-                    param($path, $physicalPath)
-                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
-                }
+                Set-ItemProperty -Path $path -Name physicalPath -Value $PhysicalPath
             }
 
-            Synchronized -Name "IIS" -ArgumentList $path, ($LogonMethodEnum.IndexOf($LogonMethod)) {
-                param($path, $logonMethod)
-                Set-ItemProperty -Path $path -Name logonMethod -Value $logonMethod
-            }
+            Set-ItemProperty -Path $path -Name logonMethod -Value ($LogonMethodEnum.IndexOf($LogonMethod))
 
-             Synchronized -Name "IIS" -ArgumentList $path, $Username, $Password {
-                param($path, $username, $password)
-                Set-ItemProperty -Path $path -Name username -Value $username
-                Set-ItemProperty -Path $path -Name password -Value $password
-            }
+            Set-ItemProperty -Path $path -Name username -Value $Username
+            Set-ItemProperty -Path $path -Name password -Value $Password
         }
 
         if ($virtualDirectory.Ensure -eq "Present" -and $Ensure -eq "Absent")
