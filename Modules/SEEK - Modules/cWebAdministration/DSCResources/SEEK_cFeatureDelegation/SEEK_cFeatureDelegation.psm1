@@ -73,11 +73,12 @@ function Set-TargetResource
 
 function Confirm-Dependencies
 {
-    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
+    Write-Debug "Checking whether WebAdministration is there in the machine or not."
     if(!(Get-Module -ListAvailable -Name WebAdministration))
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
+    Import-Module WebAdministration
 }
 
 
