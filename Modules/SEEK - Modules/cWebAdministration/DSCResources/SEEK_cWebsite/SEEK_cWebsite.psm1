@@ -175,268 +175,263 @@ function Set-TargetResource
     )
 
     Confirm-Dependencies
-    Stop-AppFabricApplicationServer -SiteName $Name
 
-    try
+    $getTargetResourceResult = $null;
+
+    if($Ensure -eq "Present")
     {
-        $getTargetResourceResult = $null;
+        #Remove Ensure from parameters as it is not needed to create new website
+        $Result = $psboundparameters.Remove("Ensure");
+        #Remove State parameter form website. Will start the website after configuration is complete
+        $Result = $psboundparameters.Remove("State");
 
-        if($Ensure -eq "Present")
+        #Remove SslFlags parameter form website.
+        #SslFlags will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("SslFlags");
+
+        #Remove bindings from parameters if they exist
+        #Bindings will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("BindingInfo");
+
+        #Remove authentication settings from parameters if they exist
+        #Authentication settings will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("AuthenticationInfo");
+
+        #Remove host file settings from parameters if they exist
+        #Host file settings will be added to site using separate cmdlet
+        $Result = $psboundparameters.Remove("HostFileInfo");
+
+        $website = Get-Website | where {$_.Name -eq $Name}
+
+
+        if($website -ne $null)
         {
-            #Remove Ensure from parameters as it is not needed to create new website
-            $Result = $psboundparameters.Remove("Ensure");
-            #Remove State parameter form website. Will start the website after configuration is complete
-            $Result = $psboundparameters.Remove("State");
+            Stop-AppFabricApplicationServer -SiteName $Name
 
-            #Remove SslFlags parameter form website.
-            #SslFlags will be added to site using separate cmdlet
-            $Result = $psboundparameters.Remove("SslFlags");
+            #update parameters as required
 
-            #Remove bindings from parameters if they exist
-            #Bindings will be added to site using separate cmdlet
-            $Result = $psboundparameters.Remove("BindingInfo");
+            $UpdateNotRequired = $true
 
-            #Remove authentication settings from parameters if they exist
-            #Authentication settings will be added to site using separate cmdlet
-            $Result = $psboundparameters.Remove("AuthenticationInfo");
-
-            #Remove host file settings from parameters if they exist
-            #Host file settings will be added to site using separate cmdlet
-            $Result = $psboundparameters.Remove("HostFileInfo");
-
-            $website = Get-Website | where {$_.Name -eq $Name}
-
-
-            if($website -ne $null)
+            #Update Physical Path if required
+            if(ValidateWebsitePath -Name $Name -PhysicalPath $PhysicalPath)
             {
-                #update parameters as required
+                $UpdateNotRequired = $false
+                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $physicalPath {
+                    param($path, $physicalPath)
+                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+                }
+                Write-Verbose("Physical path for website $Name has been updated to $PhysicalPath");
+            }
 
-                $UpdateNotRequired = $true
-
-                #Update Physical Path if required
-                if(ValidateWebsitePath -Name $Name -PhysicalPath $PhysicalPath)
+            #Update Bindings if required
+            if ($BindingInfo -ne $null)
+            {
+                if(ValidateWebsiteBindings -Name $Name -BindingInfo $BindingInfo)
                 {
                     $UpdateNotRequired = $false
-                    Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $physicalPath {
-                        param($path, $physicalPath)
-                        Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
+
+                    #Update Bindings
+                    UpdateBindings -Name $Name -BindingInfo $BindingInfo
+
+                    Write-Verbose("Bindings for website $Name have been updated.");
+                }
+            }
+
+            if (!(Test-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo))
+            {
+                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
+                Write-Verbose ("Authentication information for website $Name has been updated.")
+            }
+
+            #Update host entry if required
+            if ($HostFileInfo -ne $null)
+            {
+                if(ValidateHostFileEntry -HostFileInfo $HostFileInfo)
+                {
+                    UpdateHostFileEntry -HostFileInfo $HostFileInfo
+
+                    Write-Verbose("Hostfile for website $Name has been updated.");
+                }
+            }
+
+            #Update Application Pool if required
+            if(($website.applicationPool -ne $ApplicationPool) -and ($ApplicationPool -ne ""))
+            {
+                $UpdateNotRequired = $false
+                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $applicationPool {
+                    param($path, $applicationPool)
+                    Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
+                }
+                Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
+            }
+
+            Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
+
+            #Update State if required
+            if($website.state -ne $State -and $State -ne "")
+            {
+                $UpdateNotRequired = $false
+                if($State -eq "Started")
+                {
+                    # Ensure that there are no other websites with binding information that will conflict with this site before starting
+                    $existingSites = Get-Website | Where Name -ne $Name
+
+                    foreach($site in $existingSites)
+                    {
+                        $siteInfo = Get-TargetResource -Name $site.name
+
+                        foreach ($binding in $BindingInfo)
+                        {
+                            #Normalize empty IPAddress to "*"
+                            if($binding.IPAddress -eq "" -or $binding.IPAddress -eq $null)
+                            {
+                                $NormalizedIPAddress = "*"
+                            }
+                            else
+                            {
+                                $NormalizedIPAddress = $binding.IPAddress
+                            }
+
+                            if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
+                            {
+                                ThrowTerminatingError `
+                                    -ErrorId "WebsiteBindingConflictOnStart" `
+                                    -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
+                                    -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
+                            }
+                        }
                     }
-                    Write-Verbose("Physical path for website $Name has been updated to $PhysicalPath");
+
+                    try
+                    {
+
+                    Start-Website -Name $Name
+
+                    }
+                    catch
+                    {
+                        ThrowTerminatingError `
+                            -ErrorId "WebsiteStateFailure" `
+                            -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
+                            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                            -Exception ($_.exception)
+                    }
+
+                }
+                else
+                {
+                    try
+                    {
+
+                    Stop-Website -Name $Name
+
+                    }
+                    catch
+                    {
+                        ThrowTerminatingError `
+                            -ErrorId "WebsiteStateFailure" `
+                            -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
+                            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                            -Exception ($_.exception)
+                    }
                 }
 
-                #Update Bindings if required
-                if ($BindingInfo -ne $null)
+                Write-Verbose("State for website $Name has been updated to $State");
+
+            }
+
+            if($UpdateNotRequired)
+            {
+                Write-Verbose("Website $Name already exists and properties do not need to be udpated.");
+            }
+
+            Start-AppFabricApplicationServer -SiteName $Name
+        }
+        else #Website doesn't exist so create new one
+        {
+            try
+            {
+                #Workaround for bug when there are no websites then New-Website fails
+                if ((Get-Website).count -eq 0) {
+                    $psboundparameters.Add("Id", 1)
+                }
+                $Website = New-Website @psboundparameters
+                $Result = Stop-Website $Website.name -ErrorAction Stop
+
+                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
+
+                #Clear default bindings if new bindings defined and are different
+                if($BindingInfo -ne $null)
                 {
                     if(ValidateWebsiteBindings -Name $Name -BindingInfo $BindingInfo)
                     {
-                        $UpdateNotRequired = $false
-
-                        #Update Bindings
                         UpdateBindings -Name $Name -BindingInfo $BindingInfo
 
-                        Write-Verbose("Bindings for website $Name have been updated.");
+                        Write-Verbose ("Binding information for website $Name added")
                     }
                 }
 
-                if (!(Test-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo))
-                {
-                    Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
-                    Write-Verbose ("Authentication information for website $Name has been updated.")
-                }
+                Write-Verbose ("Begin Authentication information update for website $Name, $AuthenticationInfo")
+
+                Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
 
                 #Update host entry if required
                 if ($HostFileInfo -ne $null)
                 {
-                    if(ValidateHostFileEntry -HostFileInfo $HostFileInfo)
-                    {
-                        UpdateHostFileEntry -HostFileInfo $HostFileInfo
+                  UpdateHostFileEntry -HostFileInfo $HostFileInfo
 
-                        Write-Verbose("Hostfile for website $Name has been updated.");
-                    }
+                  Write-Verbose("Hostfile for website $Name has been updated.")
                 }
 
-                #Update Application Pool if required
-                if(($website.applicationPool -ne $ApplicationPool) -and ($ApplicationPool -ne ""))
+                Write-Verbose("successfully created website $Name")
+
+                #Start site if required
+                if($State -eq "Started")
                 {
-                    $UpdateNotRequired = $false
-                    Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $applicationPool {
-                        param($path, $applicationPool)
-                        Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
-                    }
-                    Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
+                    #Wait 1 sec for bindings to take effect
+                    #I have found that starting the website results in an error if it happens to quickly
+                    Start-Sleep -s 1
+                    Start-Website -Name $Name -ErrorAction Stop
                 }
 
-                Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
-
-                #Update State if required
-                if($website.state -ne $State -and $State -ne "")
-                {
-                    $UpdateNotRequired = $false
-                    if($State -eq "Started")
-                    {
-                        # Ensure that there are no other websites with binding information that will conflict with this site before starting
-                        $existingSites = Get-Website | Where Name -ne $Name
-
-                        foreach($site in $existingSites)
-                        {
-                            $siteInfo = Get-TargetResource -Name $site.name
-
-                            foreach ($binding in $BindingInfo)
-                            {
-                                #Normalize empty IPAddress to "*"
-                                if($binding.IPAddress -eq "" -or $binding.IPAddress -eq $null)
-                                {
-                                    $NormalizedIPAddress = "*"
-                                }
-                                else
-                                {
-                                    $NormalizedIPAddress = $binding.IPAddress
-                                }
-
-                                if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
-                                {
-                                    ThrowTerminatingError `
-                                        -ErrorId "WebsiteBindingConflictOnStart" `
-                                        -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
-                                        -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
-                                }
-                            }
-                        }
-
-                        try
-                        {
-
-                        Start-Website -Name $Name
-
-                        }
-                        catch
-                        {
-                            ThrowTerminatingError `
-                                -ErrorId "WebsiteStateFailure" `
-                                -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
-                                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
-                                -Exception ($_.exception)
-                        }
-
-                    }
-                    else
-                    {
-                        try
-                        {
-
-                        Stop-Website -Name $Name
-
-                        }
-                        catch
-                        {
-                            ThrowTerminatingError `
-                                -ErrorId "WebsiteStateFailure" `
-                                -ErrorMessage  ($($LocalizedData.WebsiteStateFailureError) -f ${Name}) `
-                                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
-                                -Exception ($_.exception)
-                        }
-                    }
-
-                    Write-Verbose("State for website $Name has been updated to $State");
-
-                }
-
-                if($UpdateNotRequired)
-                {
-                    Write-Verbose("Website $Name already exists and properties do not need to be udpated.");
-                }
-
-
-            }
-            else #Website doesn't exist so create new one
-            {
-                try
-                {
-                    #Workaround for bug when there are no websites then New-Website fails
-                    if ((Get-Website).count -eq 0) {
-                        $psboundparameters.Add("Id", 1)
-                    }
-                    $Website = New-Website @psboundparameters
-                    $Result = Stop-Website $Website.name -ErrorAction Stop
-
-                    Set-WebConfiguration -PSPath IIS:\Sites -Location $Name -Filter 'system.webserver/security/access' -Value $SslFlags
-
-                    #Clear default bindings if new bindings defined and are different
-                    if($BindingInfo -ne $null)
-                    {
-                        if(ValidateWebsiteBindings -Name $Name -BindingInfo $BindingInfo)
-                        {
-                            UpdateBindings -Name $Name -BindingInfo $BindingInfo
-
-                            Write-Verbose ("Binding information for website $Name added")
-                        }
-                    }
-
-                    Write-Verbose ("Begin Authentication information update for website $Name, $AuthenticationInfo")
-
-                    Set-AuthenticationInfo -Website $Name -AuthenticationInfo $AuthenticationInfo
-
-                    #Update host entry if required
-                    if ($HostFileInfo -ne $null)
-                    {
-                      UpdateHostFileEntry -HostFileInfo $HostFileInfo
-
-                      Write-Verbose("Hostfile for website $Name has been updated.")
-                    }
-
-                    Write-Verbose("successfully created website $Name")
-
-                    #Start site if required
-                    if($State -eq "Started")
-                    {
-                        #Wait 1 sec for bindings to take effect
-                        #I have found that starting the website results in an error if it happens to quickly
-                        Start-Sleep -s 1
-                        Start-Website -Name $Name -ErrorAction Stop
-                    }
-
-                    Write-Verbose("successfully started website $Name")
-                }
-                catch
-                {
-                    ThrowTerminatingError `
-                        -ErrorId "WebsiteCreationFailure" `
-                        -ErrorMessage  ($($LocalizedData.FeatureCreationFailureError) -f ${Name}) `
-                        -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
-                        -Exception ($_.exception)
-                }
-            }
-        }
-        else #Ensure is set to "Absent" so remove website
-        {
-            try
-            {
-                $website = Get-Website | where {$_.Name -eq $Name}
-                if($website -ne $null)
-                {
-                    Remove-website -name $Name
-
-                    Write-Verbose("Successfully removed Website $Name.")
-                }
-                else
-                {
-                    Write-Verbose("Website $Name does not exist.")
-                }
+                Write-Verbose("successfully started website $Name")
             }
             catch
             {
                 ThrowTerminatingError `
-                    -ErrorId "WebsiteRemovalFailure" `
-                    -ErrorMessage  ($($LocalizedData.WebsiteRemovalFailureError) -f ${Name}) `
+                    -ErrorId "WebsiteCreationFailure" `
+                    -ErrorMessage  ($($LocalizedData.FeatureCreationFailureError) -f ${Name}) `
                     -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
                     -Exception ($_.exception)
             }
-
         }
     }
-    finally
+    else #Ensure is set to "Absent" so remove website
     {
-        Start-AppFabricApplicationServer -SiteName $Name
+        try
+        {
+            $website = Get-Website | where {$_.Name -eq $Name}
+            if($website -ne $null)
+            {
+                Stop-AppFabricApplicationServer -SiteName $Name
+                Remove-website -name $Name
+
+                Write-Verbose("Successfully removed Website $Name.")
+            }
+            else
+            {
+                Write-Verbose("Website $Name does not exist.")
+            }
+        }
+        catch
+        {
+            ThrowTerminatingError `
+                -ErrorId "WebsiteRemovalFailure" `
+                -ErrorMessage  ($($LocalizedData.WebsiteRemovalFailureError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult) `
+                -Exception ($_.exception)
+        }
+
     }
 }
 
