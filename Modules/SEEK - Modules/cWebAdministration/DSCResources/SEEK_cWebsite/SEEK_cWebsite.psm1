@@ -380,9 +380,11 @@ function Test-BindingDoesNotConflictWithOtherSites {
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $WebsiteBindingInfo
     )
+    #if ($WebsiteBindingInfo -eq $null) { return $true }
     [array]$existingSites = Get-Website | Where Name -ne $WebsiteName | Select -ExpandProperty Name
     [array]$existingBindingInfo = $existingSites | Where-Object { $_ -ne $null } | ForEach-Object { (Get-TargetResource -Name $_).BindingInfo }
-    [array]$proposedBindingInfo = $existingBindingInfo + $WebsiteBindingInfo
+    [array]$foo = NormalizeIpAddressBinding -BindingInfo $WebsiteBindingInfo
+    [array]$proposedBindingInfo = $existingBindingInfo + $foo
     [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress -Unique
     return ($proposedBindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
@@ -509,6 +511,26 @@ function Test-TargetResource
 }
 
 #region HelperFunctions
+
+#Normalize empty IPAddress to "*"
+function NormalizeIpAddressBinding
+{
+    [CmdletBinding()]
+    param
+    (
+        [parameter()]
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $BindingInfo
+    )
+
+    return $BindingInfo | Where-Object { $_ -ne $null } | ForEach-Object {
+        if($_.IPAddress -eq "" -or $_.IPAddress -eq $null)
+        {
+            return New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$_.Port;Protocol=$_.Protocol;HostName=$_.HostName;IPAddress="*"} -ClientOnly
+        }
+        return $_
+    }
+}
 
 function ValidateHostFileEntry
 {

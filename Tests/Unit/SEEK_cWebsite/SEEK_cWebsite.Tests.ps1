@@ -20,6 +20,11 @@ $MockHttpBinding = New-Object PSObject -Property @{
     protocol = "http"
 }
 
+$MockWildcardHttpBinding = New-Object PSObject -Property @{
+    bindingInformation = "*:80:www.mysite.com"
+    protocol = "http"
+}
+
 $MockNetPipeBinding = New-Object PSObject -Property @{
     bindingInformation = "my.service"
     protocol = "net.pipe"
@@ -430,6 +435,20 @@ Describe "Set-TargetResource" {
         It "terminates the creation of the web site" {
             Mock ThrowTerminatingError {} -Verifiable
             $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.conflictingsite.com"} -ClientOnly
+            $BindingInfo = @($httpBinding)
+            Set-TargetResource -Name "ConflictingSite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
+            Assert-VerifiableMocks
+        }
+    }
+
+    Context "when wildcard binding conflicts with an existing site" {
+        Mock Get-Website {$MockWebsite}
+        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockWildcardHttpBinding)}} `
+            -ParameterFilter {$Name -eq "Bindings"}
+
+        It "terminates the creation of the web site" {
+            Mock ThrowTerminatingError {} -Verifiable
+            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="";HostName="www.conflictingsite.com"} -ClientOnly
             $BindingInfo = @($httpBinding)
             Set-TargetResource -Name "ConflictingSite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
