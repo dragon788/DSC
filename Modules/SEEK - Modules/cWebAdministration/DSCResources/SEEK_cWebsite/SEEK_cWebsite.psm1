@@ -380,11 +380,9 @@ function Test-BindingDoesNotConflictWithOtherSites {
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $WebsiteBindingInfo
     )
-    #if ($WebsiteBindingInfo -eq $null) { return $true }
     [array]$existingSites = Get-Website | Where Name -ne $WebsiteName | Select -ExpandProperty Name
     [array]$existingBindingInfo = $existingSites | Where-Object { $_ -ne $null } | ForEach-Object { (Get-TargetResource -Name $_).BindingInfo }
-    [array]$foo = NormalizeIpAddressBinding -BindingInfo $WebsiteBindingInfo
-    [array]$proposedBindingInfo = $existingBindingInfo + $foo
+    [array]$proposedBindingInfo = $existingBindingInfo + (NormalizeIpAddressBinding -BindingInfo $WebsiteBindingInfo)
     [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress -Unique
     return ($proposedBindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
