@@ -236,7 +236,7 @@ Describe "Set-TargetResource" {
 
     Context "when web site is absent" {
 
-        Mock Get-Website {New-Object PSObject -Property @{name = "OtherSite"}}
+        Mock Get-Website {$null}
 
         It "creates a new web site" {
             Mock New-Website -Verifiable -ParameterFilter {$Name -eq "MySite" -and $PhysicalPath -eq "C:\foo" -and $ApplicationPool -eq "MyAppPool"}
@@ -418,6 +418,20 @@ Describe "Set-TargetResource" {
             $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.mysite.com"} -ClientOnly
             $BindingInfo = @($httpBinding, $httpBinding)
             Set-TargetResource -Name "MySite" -PhysicalPath "C:\foo" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
+            Assert-VerifiableMocks
+        }
+    }
+
+    Context "when binding conflicts with an existing site" {
+        Mock Get-Website {$MockWebsite}
+        Mock Get-ItemProperty {New-Object PSObject -Property @{Collection = @($MockHttpBinding)}} `
+            -ParameterFilter {$Name -eq "Bindings"}
+
+        It "terminates the creation of the web site" {
+            Mock ThrowTerminatingError {} -Verifiable
+            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.conflictingsite.com"} -ClientOnly
+            $BindingInfo = @($httpBinding)
+            Set-TargetResource -Name "ConflictingSite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
         }
     }

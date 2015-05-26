@@ -161,8 +161,15 @@ function Set-TargetResource
         #Host file settings will be added to site using separate cmdlet
         $Result = $psboundparameters.Remove("HostFileInfo");
 
-        $website = Get-Website | where {$_.Name -eq $Name}
+        if(!(Test-BindingDoesNotConflictWithOtherSites -WebsiteName $Name -WebsiteBindingInfo $BindingInfo))
+        {
+            ThrowTerminatingError `
+                -ErrorId "WebsiteBindingConflictOnStart" `
+                -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
+        }
 
+        $website = Get-Website | where {$_.Name -eq $Name}
 
         if($website -ne $null)
         {
@@ -227,34 +234,6 @@ function Set-TargetResource
                 $UpdateNotRequired = $false
                 if($State -eq "Started")
                 {
-                    # Ensure that there are no other websites with binding information that will conflict with this site before starting
-                    $existingSites = Get-Website | Where Name -ne $Name
-
-                    foreach($site in $existingSites)
-                    {
-                        $siteInfo = Get-TargetResource -Name $site.name
-
-                        foreach ($binding in $BindingInfo)
-                        {
-                            #Normalize empty IPAddress to "*"
-                            if($binding.IPAddress -eq "" -or $binding.IPAddress -eq $null)
-                            {
-                                $NormalizedIPAddress = "*"
-                            }
-                            else
-                            {
-                                $NormalizedIPAddress = $binding.IPAddress
-                            }
-
-                            if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
-                            {
-                                ThrowTerminatingError `
-                                    -ErrorId "WebsiteBindingConflictOnStart" `
-                                    -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
-                                    -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
-                            }
-                        }
-                    }
 
                     try
                     {
@@ -387,6 +366,25 @@ function Set-TargetResource
         }
 
     }
+}
+
+# Ensure that there are no other websites with binding information that will conflict with this site
+function Test-BindingDoesNotConflictWithOtherSites {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$WebsiteName,
+
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $WebsiteBindingInfo
+    )
+    [array]$existingSites = Get-Website | Where Name -ne $WebsiteName | Select -ExpandProperty Name
+    [array]$existingBindingInfo = $existingSites | Where-Object { $_ -ne $null } | ForEach-Object { (Get-TargetResource -Name $_).BindingInfo }
+    [array]$proposedBindingInfo = $existingBindingInfo + $WebsiteBindingInfo
+    [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress -Unique
+    return ($proposedBindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 
 
@@ -658,21 +656,30 @@ function ValidateWebsiteBindings
         $BindingInfo
     )
 
-    $Valid = $true
-
-    foreach($binding in $BindingInfo)
+    if (!(Test-UniqueBindings -BindingInfo $BindingInfo))
     {
-        # First ensure that desired binding information is valid ie. No duplicate IPAddres, Port, Host name combinations.
-        if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
-        {
-            ThrowTerminatingError `
-                -ErrorId "WebsiteBindingInputInvalidation" `
-                -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
-                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
-        }
+        ThrowTerminatingError `
+            -ErrorId "WebsiteBindingInputInvalidation" `
+            -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
+            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
     }
 
     return compareWebsiteBindings -Name $Name -BindingInfo $BindingInfo
+}
+
+# return true if all bindings are unique, false otherwise
+function Test-UniqueBindings
+{
+    [CmdletBinding()]
+    Param
+    (
+        [parameter()]
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $BindingInfo
+    )
+
+    [array]$uniqueBindingInfo = $BindingInfo | Select -Property IpAddress, Port, Host -Unique
+    return ($BindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 
 function Test-AuthenticationEnabled
@@ -792,50 +799,6 @@ function Get-DefaultAuthenticationInfo
     New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
         -ClientOnly `
         -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
-}
-
-function EnsurePortIPHostUnique
-{
-    [CmdletBinding()]
-    param
-    (
-        [parameter()]
-        [System.UInt16]
-        $Port,
-
-        [parameter()]
-        [string]
-        $IPAddress,
-
-        [parameter()]
-        [string]
-        $HostName,
-
-        [parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [Microsoft.Management.Infrastructure.CimInstance[]]
-        $BindingInfo,
-
-        [parameter()]
-        $UniqueInstances = 0
-    )
-
-    foreach ($Binding in $BindingInfo)
-    {
-        if($binding.Port -eq $Port -and [string]$Binding.IPAddress -eq $IPAddress -and [string]$Binding.HostName -eq $HostName)
-        {
-            $UniqueInstances += 1
-        }
-    }
-
-    if($UniqueInstances -gt 1)
-    {
-        return $false
-    }
-    else
-    {
-        return $true
-    }
 }
 
 # Helper function used to compare website bindings of actual to desired
