@@ -383,7 +383,7 @@ function Test-BindingDoesNotConflictWithOtherSites {
     [array]$existingSites = Get-Website | Where Name -ne $WebsiteName | Select -ExpandProperty Name
     [array]$existingBindingInfo = $existingSites | Where-Object { $_ -ne $null } | ForEach-Object { (Get-TargetResource -Name $_).BindingInfo }
     [array]$proposedBindingInfo = $existingBindingInfo + (NormalizeIpAddressBinding -BindingInfo $WebsiteBindingInfo)
-    [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress -Unique
+    [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress, HostName -Unique
     return ($proposedBindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 
@@ -698,7 +698,7 @@ function Test-UniqueBindings
         $BindingInfo
     )
 
-    [array]$uniqueBindingInfo = $BindingInfo | Select -Property IpAddress, Port, Host -Unique
+    [array]$uniqueBindingInfo = $BindingInfo | Select -Property IpAddress, Port, HostName -Unique
     return ($BindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 

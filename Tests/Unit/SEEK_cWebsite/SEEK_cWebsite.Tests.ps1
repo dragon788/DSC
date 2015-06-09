@@ -434,7 +434,7 @@ Describe "Set-TargetResource" {
 
         It "terminates the creation of the web site" {
             Mock ThrowTerminatingError {} -Verifiable
-            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.conflictingsite.com"} -ClientOnly
+            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="192.168.0.1";HostName="www.mysite.com"} -ClientOnly
             $BindingInfo = @($httpBinding)
             Set-TargetResource -Name "ConflictingSite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
@@ -448,7 +448,7 @@ Describe "Set-TargetResource" {
 
         It "terminates the creation of the web site" {
             Mock ThrowTerminatingError {} -Verifiable
-            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="";HostName="www.conflictingsite.com"} -ClientOnly
+            $httpBinding = New-CimInstance -ClassName SEEK_cWebBindingInformation -Namespace root/microsoft/Windows/DesiredStateConfiguration -Property @{Port=[System.UInt16]80;Protocol="http";IPAddress="";HostName="www.mysite.com"} -ClientOnly
             $BindingInfo = @($httpBinding)
             Set-TargetResource -Name "ConflictingSite" -PhysicalPath "C:\bar" -ApplicationPool "MyAppPool" -AuthenticationInfo $AuthenticationInfo -BindingInfo $BindingInfo
             Assert-VerifiableMocks
