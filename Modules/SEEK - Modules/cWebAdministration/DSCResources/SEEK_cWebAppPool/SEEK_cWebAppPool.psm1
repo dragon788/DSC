@@ -219,7 +219,7 @@ function Confirm-Dependencies
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
-    Import-Module WebAdministration
+    Import-Module WebAdministration 4>&1 | Out-Null
 }
 
 Export-ModuleMember -Function *-TargetResource
