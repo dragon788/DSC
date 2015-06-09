@@ -239,7 +239,8 @@ function Stop-AppFabricApplicationServer
     )
 
     Write-Debug "Checking whether App Fabric is installed."
-    if(Get-Module -ListAvailable -Name ApplicationServer)
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
     {
         Import-Module ApplicationServer 4>&1 | Out-Null
         Stop-ASApplication -SiteName $SiteName
@@ -257,7 +258,8 @@ function Start-AppFabricApplicationServer
     )
 
     Write-Debug "Checking whether App Fabric is installed."
-    if(Get-Module -ListAvailable -Name ApplicationServer)
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
     {
         Import-Module ApplicationServer 4>&1 | Out-Null
         Start-ASApplication -SiteName $SiteName
@@ -267,7 +269,8 @@ function Start-AppFabricApplicationServer
 function Confirm-Dependencies
 {
     Write-Debug "Checking whether WebAdministration is there in the machine or not."
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    Get-Module -ListAvailable -Name WebAdministration -OutVariable webAdministrationModule 4>&1 | Out-Null
+    if(-not $webAdministrationModule)
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
