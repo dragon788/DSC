@@ -14,15 +14,15 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes></releaseNotes>
     <dependencies>
-      <dependency id="seek-dsc-harddisk" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-networking" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-messagequeue" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-nservicebus" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-software" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-topshelf" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-webadministration" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-database" version="[1.0,2.0)"/>
-      <dependency id="seek-dsc-appfabric-hosting" version="[1.0,2.0)"/>
+      <dependency id="seek-dsc-harddisk" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-networking" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-messagequeue" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-nservicebus" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-software" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-topshelf" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-webadministration" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-database" version="[1.0,1.9]"/>
+      <dependency id="seek-dsc-appfabric-hosting" version="[1.0,1.9]"/>
     </dependencies>
   </metadata>
   <files>
