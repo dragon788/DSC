@@ -107,7 +107,7 @@ function Set-TargetResource
             Set-WebConfiguration -Location "${Website}/${Name}" -Filter 'system.webserver/security/access' -Value $SslFlags
 
             if ($EnabledProtocols) {
-                Set-ItemProperty -Path $webappPath -Name EnabledProtocols -Value $EnabledProtocols
+                Set-ItemProperty -Path $webappPath -Name enabledProtocols -Value $EnabledProtocols
             }
         }
         elseif (($Ensure -eq "Absent") -and ($webApplication -ne $null))
