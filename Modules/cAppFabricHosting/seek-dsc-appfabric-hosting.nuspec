@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cAppFabricHosting" exclude="*.nuspec;cAppFabricHosting.psd1"/>
-    <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cAppFabricHosting.psd1" target="lib\cAppFabricHosting" />
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cAppFabricHosting.psd1" target="lib\cAppFabricHosting" />
   </files>
 </package>

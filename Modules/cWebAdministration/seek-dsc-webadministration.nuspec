@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cWebAdministration" exclude="*.nuspec;cWebAdministration.psd1"/>
-    <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cWebAdministration.psd1" target="lib\cWebAdministration" />
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cWebAdministration.psd1" target="lib\cWebAdministration" />
   </files>
 </package>

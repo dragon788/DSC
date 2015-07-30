@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cTopShelf" exclude="*.nuspec;cTopShelf.psd1"/>
-    <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cTopShelf.psd1" target="lib\cTopShelf" />
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cTopShelf.psd1" target="lib\cTopShelf" />
   </files>
 </package>

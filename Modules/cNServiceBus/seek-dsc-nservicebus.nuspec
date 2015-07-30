@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cNServiceBus" exclude="*.nuspec;cNServiceBus.psd1"/>
-    <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cNServiceBus.psd1" target="lib\cNServiceBus" />
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cNServiceBus.psd1" target="lib\cNServiceBus" />
   </files>
 </package>

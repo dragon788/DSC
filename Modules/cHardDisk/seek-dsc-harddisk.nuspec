@@ -16,7 +16,7 @@
   </metadata>
   <files>
     <file src="**" target="lib\cHardDisk" exclude="*.nuspec;cHardDisk.psd1"/>
-    <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\cHardDisk.psd1" target="lib\cHardDisk" />
+    <file src="..\..\..\Tools\**" target="tools" />
+    <file src="..\..\..\Output\ModuleManifests\cHardDisk.psd1" target="lib\cHardDisk" />
   </files>
 </package>
