@@ -58,15 +58,15 @@ task Uninstall {
 }
 
 task UnitTest {
-  Invoke-Pester -Path .\Tests\Unit -OutputFile .\Test.xml -OutputFormat LegacyNUnitXml -EnableExit
+  Invoke-Tests -Path .\Tests\Unit
 }
 
 task IntegrationTest {
-  Invoke-Pester -Path .\Tests\Integration
+  Invoke-Tests -Path .\Tests\Integration
 }
 
 task E2ETest -depends FlushCache {
-  Invoke-Pester -Path .\Tests\E2E
+  Invoke-Tests -Path .\Tests\E2E
 }
 
 task Test {
