@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" exclude="*.nuspec;SEEK_cTopShelf.psd1"/>
+    <file src="**" target="lib\cTopShelf" exclude="*.nuspec;cTopShelf.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\SEEK_cTopShelf.psd1" />
+    <file src="..\..\Output\ModuleManifests\cTopShelf.psd1" target="lib\cTopShelf" />
   </files>
 </package>

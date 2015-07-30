@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" exclude="*.nuspec;SEEK_cHardDisk.psd1"/>
+    <file src="**" target="lib\cHardDisk" exclude="*.nuspec;cHardDisk.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\SEEK_cHardDisk.psd1" />
+    <file src="..\..\Output\ModuleManifests\cHardDisk.psd1" target="lib\cHardDisk" />
   </files>
 </package>

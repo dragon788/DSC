@@ -1,7 +1,7 @@
 try
 {
 	$DSCResourcesRoot = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
-	$DSCResourceTarget = Join-Path $env:chocolateyPackageFolder "DSCResources"
+	$DSCResourceTarget = Join-Path $env:chocolateyPackageFolder "lib"
 
 	# remove DSC resources that may have been manually installed
 	if (Test-Path "$DSCResourcesRoot\SEEK - Modules") {

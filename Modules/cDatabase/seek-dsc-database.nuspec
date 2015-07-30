@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" exclude="*.nuspec;SEEK_cDatabase.psd1"/>
+    <file src="**" target="lib\cDatabase" exclude="*.nuspec;cDatabase.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\SEEK_cDatabase.psd1" />
+    <file src="..\..\Output\ModuleManifests\cDatabase.psd1" target="lib\cDatabase" />
   </files>
 </package>

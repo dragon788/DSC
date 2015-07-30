@@ -15,8 +15,8 @@
     <releaseNotes></releaseNotes>
   </metadata>
   <files>
-    <file src="**" exclude="*.nuspec;SEEK_cAppFabricHosting.psd1"/>
+    <file src="**" target="lib\cAppFabricHosting" exclude="*.nuspec;cAppFabricHosting.psd1"/>
     <file src="..\..\Tools\**" target="tools" />
-    <file src="..\..\Output\ModuleManifests\SEEK_cAppFabricHosting.psd1" />
+    <file src="..\..\Output\ModuleManifests\cAppFabricHosting.psd1" target="lib\cAppFabricHosting" />
   </files>
 </package>
