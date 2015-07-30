@@ -13,6 +13,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network :forwarded_port, guest: 3389, host: 3399,      id: "rdp",   auto_correct: false
   config.vm.network :forwarded_port, guest: 5985, host: host_port, id: "winrm", auto_correct: false
 
+  # Build + Test Application
+  #    88   config.vm.provision "shell", path: "vagrant/shell/build.ps1", run: "always"
+
   config.vm.synced_folder ".", "/vagrant"
 
   config.vm.provider "virtualbox" do |vb|
