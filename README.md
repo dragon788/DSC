@@ -57,13 +57,13 @@ Please see the Writing a Custom DSC Resource chapter in [The DSC book](http://po
 To get quick feedback you can put the DSC source code directly on the PSModulePath. The following task does this for you:
 
 ```
-psake EnableDeveloperMode
+.\build.ps1 EnableDeveloperMode
 ```
 
 To remove the DSC source from the PSModulePath, run the following task:
 
 ```
-psake DisableDeveloperMode
+.\build.ps1 DisableDeveloperMode
 ```
 
 ## Testing
@@ -80,7 +80,7 @@ If you wish to contribute to the SEEK DSC resources, please ensure you run the t
 The following command will run the full suite of tests:
 
 ```
-psake TestAll
+.\build.ps1 TestAll
 ```
 
 #### Unit tests:
@@ -92,7 +92,7 @@ NOTE: if cmdlets cannot be mocked directly, it is acceptable to partially mock t
 To run just the unit tests, use the following command:
 
 ```
-psake UnitTest
+.\build.ps1 UnitTest
 ```
 
 #### Integration tests:
@@ -102,7 +102,7 @@ Itegration tests are not absolutely necessary. They are however useful to get so
 Run the integration tests using the following command:
 
 ```
-psake IntegrationTest
+.\build.ps1 IntegrationTest
 ```
 
 #### E2E tests:
@@ -112,6 +112,6 @@ Each module should have one end-to-end test. This ensures that a DSC configurati
 To run the E2E tests, run the following command:
 
 ```
-psake E2ETest
+.\build.ps1 E2ETest
 ```
 
