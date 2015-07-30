@@ -18,46 +18,6 @@ WebsiteBindingConflictOnStartError = Website "{0}" could not be started due to b
 '@
 }
 
-function Synchronized
-{
-    [CmdletBinding()]
-    param
-    (
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern("^[^\\]?")]
-        [parameter(Mandatory = $true)]
-        [string] $Name,
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock,
-
-        [parameter(Mandatory = $false)]
-        [int] $MillisecondsTimeout = 5000,
-
-        [parameter(Mandatory = $false)]
-        [boolean] $InitiallyOwned = $false,
-
-        [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @(),
-
-        [parameter(Mandatory = $false)]
-        [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global"
-    )
-
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-
-    if ($mutex.WaitOne($MillisecondsTimeout)) {
-        try {
-            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        }
-        finally {
-            $mutex.ReleaseMutex()
-        }
-    }
-    else { throw "Cannot aquire mutex: $Name"}
-}
-
 # The Get-TargetResource cmdlet is used to fetch the status of role or Website on the target machine.
 # It gives the Website info of the requested role/feature on the target machine.
 function Get-TargetResource
@@ -201,11 +161,20 @@ function Set-TargetResource
         #Host file settings will be added to site using separate cmdlet
         $Result = $psboundparameters.Remove("HostFileInfo");
 
-        $website = Get-Website | where {$_.Name -eq $Name}
+        if(!(Test-BindingDoesNotConflictWithOtherSites -WebsiteName $Name -WebsiteBindingInfo $BindingInfo))
+        {
+            ThrowTerminatingError `
+                -ErrorId "WebsiteBindingConflictOnStart" `
+                -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
+                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
+        }
 
+        $website = Get-Website | where {$_.Name -eq $Name}
 
         if($website -ne $null)
         {
+            Stop-AppFabricApplicationServer -SiteName $Name
+
             #update parameters as required
 
             $UpdateNotRequired = $true
@@ -214,10 +183,7 @@ function Set-TargetResource
             if(ValidateWebsitePath -Name $Name -PhysicalPath $PhysicalPath)
             {
                 $UpdateNotRequired = $false
-                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $physicalPath {
-                    param($path, $physicalPath)
-                    Set-ItemProperty -Path $path -Name physicalPath -Value $physicalPath
-                }
+                Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name physicalPath -Value $physicalPath
                 Write-Verbose("Physical path for website $Name has been updated to $PhysicalPath");
             }
 
@@ -256,10 +222,7 @@ function Set-TargetResource
             if(($website.applicationPool -ne $ApplicationPool) -and ($ApplicationPool -ne ""))
             {
                 $UpdateNotRequired = $false
-                Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $applicationPool {
-                    param($path, $applicationPool)
-                    Set-ItemProperty -Path $path -Name applicationPool -Value $applicationPool
-                }
+                Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name applicationPool -Value $applicationPool
                 Write-Verbose("Application Pool for website $Name has been updated to $ApplicationPool")
             }
 
@@ -271,34 +234,6 @@ function Set-TargetResource
                 $UpdateNotRequired = $false
                 if($State -eq "Started")
                 {
-                    # Ensure that there are no other websites with binding information that will conflict with this site before starting
-                    $existingSites = Get-Website | Where Name -ne $Name
-
-                    foreach($site in $existingSites)
-                    {
-                        $siteInfo = Get-TargetResource -Name $site.name
-
-                        foreach ($binding in $BindingInfo)
-                        {
-                            #Normalize empty IPAddress to "*"
-                            if($binding.IPAddress -eq "" -or $binding.IPAddress -eq $null)
-                            {
-                                $NormalizedIPAddress = "*"
-                            }
-                            else
-                            {
-                                $NormalizedIPAddress = $binding.IPAddress
-                            }
-
-                            if( !(EnsurePortIPHostUnique -Port $Binding.Port -IPAddress $NormalizedIPAddress -HostName $binding.HostName -BindingInfo $siteInfo.BindingInfo -UniqueInstances 1))
-                            {
-                                ThrowTerminatingError `
-                                    -ErrorId "WebsiteBindingConflictOnStart" `
-                                    -ErrorMessage  ($($LocalizedData.WebsiteBindingConflictOnStartError) -f ${Name}) `
-                                    -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
-                            }
-                        }
-                    }
 
                     try
                     {
@@ -343,7 +278,7 @@ function Set-TargetResource
                 Write-Verbose("Website $Name already exists and properties do not need to be udpated.");
             }
 
-
+            Start-AppFabricApplicationServer -SiteName $Name
         }
         else #Website doesn't exist so create new one
         {
@@ -411,6 +346,7 @@ function Set-TargetResource
             $website = Get-Website | where {$_.Name -eq $Name}
             if($website -ne $null)
             {
+                Stop-AppFabricApplicationServer -SiteName $Name
                 Remove-website -name $Name
 
                 Write-Verbose("Successfully removed Website $Name.")
@@ -430,6 +366,25 @@ function Set-TargetResource
         }
 
     }
+}
+
+# Ensure that there are no other websites with binding information that will conflict with this site
+function Test-BindingDoesNotConflictWithOtherSites {
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$WebsiteName,
+
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $WebsiteBindingInfo
+    )
+    [array]$existingSites = Get-Website | Where Name -ne $WebsiteName | Select -ExpandProperty Name
+    [array]$existingBindingInfo = $existingSites | Where-Object { $_ -ne $null } | ForEach-Object { (Get-TargetResource -Name $_).BindingInfo }
+    [array]$proposedBindingInfo = $existingBindingInfo + (NormalizeIpAddressBinding -BindingInfo $WebsiteBindingInfo)
+    [array]$uniqueBindingInfo = $proposedBindingInfo | Where-Object { $_ -ne $null } | Select -Property Port, IpAddress, HostName -Unique
+    return ($proposedBindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 
 
@@ -555,6 +510,26 @@ function Test-TargetResource
 
 #region HelperFunctions
 
+#Normalize empty IPAddress to "*"
+function NormalizeIpAddressBinding
+{
+    [CmdletBinding()]
+    param
+    (
+        [parameter()]
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $BindingInfo
+    )
+
+    return $BindingInfo | Where-Object { $_ -ne $null } | ForEach-Object {
+        if($_.IPAddress -eq "" -or $_.IPAddress -eq $null)
+        {
+            return New-CimInstance -ClassName SEEK_cWebBindingInformation -Property @{Port=[System.UInt16]$_.Port;Protocol=$_.Protocol;HostName=$_.HostName;IPAddress="*"} -ClientOnly
+        }
+        return $_
+    }
+}
+
 function ValidateHostFileEntry
 {
     [CmdletBinding()]
@@ -619,16 +594,12 @@ function UpdateHostFileEntry
             {
                 if ($HostEntryIPAddress -ne $null -and $HostEntryName -ne $null)
                 {
-                    Synchronized -Name [System.Uri]::EscapeDataString($hostsFile) -ArgumentList $hostFile, $HostEntryName, $HostEntryIPAddress -ScriptBlock {
-                        param($hostFile, $hostEntryName, $hostEntryIPAddress)
-                        if (-not (Select-String $hostFile -pattern "\s+${hostEntryName}\s*$"))
-                        {
-                            Add-Content $hostFile "`n$hostEntryIPAddress    $hostEntryName"
-                            (Get-Content($hostFile)) | Set-Content($hostFile)
-                        }
-                        else {
-                            (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+${hostEntryName}\s*$", "$hostEntryIPAddress    $hostEntryName" } | Set-Content($hostFile)
-                        }
+                    if (-not (Select-String $hostFile -pattern "\s+${hostEntryName}\s*$"))
+                    {
+                        Add-Content $hostFile "`n$HostEntryIPAddress    $hostEntryName"
+                    }
+                    else {
+                        (Get-Content($hostFile)) | ForEach-Object {$_ -replace "^\d+.\d+.\d+.\d+\s+${HostEntryName}\s*$", "$HostEntryIPAddress    $hostEntryName" } | Set-Content($hostFile)
                     }
                 }
             }
@@ -705,21 +676,30 @@ function ValidateWebsiteBindings
         $BindingInfo
     )
 
-    $Valid = $true
-
-    foreach($binding in $BindingInfo)
+    if (!(Test-UniqueBindings -BindingInfo $BindingInfo))
     {
-        # First ensure that desired binding information is valid ie. No duplicate IPAddres, Port, Host name combinations.
-        if (!(EnsurePortIPHostUnique -Port $binding.Port -IPAddress $binding.IPAddress -HostName $Binding.Hostname -BindingInfo $BindingInfo) )
-        {
-            ThrowTerminatingError `
-                -ErrorId "WebsiteBindingInputInvalidation" `
-                -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
-                -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
-        }
+        ThrowTerminatingError `
+            -ErrorId "WebsiteBindingInputInvalidation" `
+            -ErrorMessage  ($($LocalizedData.WebsiteBindingInputInvalidationError) -f ${Name}) `
+            -ErrorCategory ([System.Management.Automation.ErrorCategory]::InvalidResult)
     }
 
     return compareWebsiteBindings -Name $Name -BindingInfo $BindingInfo
+}
+
+# return true if all bindings are unique, false otherwise
+function Test-UniqueBindings
+{
+    [CmdletBinding()]
+    Param
+    (
+        [parameter()]
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $BindingInfo
+    )
+
+    [array]$uniqueBindingInfo = $BindingInfo | Select -Property IpAddress, Port, HostName -Unique
+    return ($BindingInfo.Count -eq $uniqueBindingInfo.Count)
 }
 
 function Test-AuthenticationEnabled
@@ -839,50 +819,6 @@ function Get-DefaultAuthenticationInfo
     New-CimInstance -ClassName SEEK_cWebAuthenticationInformation `
         -ClientOnly `
         -Property @{Anonymous="false";Basic="false";Digest="false";Windows="false"}
-}
-
-function EnsurePortIPHostUnique
-{
-    [CmdletBinding()]
-    param
-    (
-        [parameter()]
-        [System.UInt16]
-        $Port,
-
-        [parameter()]
-        [string]
-        $IPAddress,
-
-        [parameter()]
-        [string]
-        $HostName,
-
-        [parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [Microsoft.Management.Infrastructure.CimInstance[]]
-        $BindingInfo,
-
-        [parameter()]
-        $UniqueInstances = 0
-    )
-
-    foreach ($Binding in $BindingInfo)
-    {
-        if($binding.Port -eq $Port -and [string]$Binding.IPAddress -eq $IPAddress -and [string]$Binding.HostName -eq $HostName)
-        {
-            $UniqueInstances += 1
-        }
-    }
-
-    if($UniqueInstances -gt 1)
-    {
-        return $false
-    }
-    else
-    {
-        return $true
-    }
 }
 
 # Helper function used to compare website bindings of actual to desired
@@ -1009,10 +945,7 @@ function UpdateBindings
 
     #Enable all protocols specified in bindings
     $SiteEnabledProtocols = $BindingInfo  | Select-Object -ExpandProperty Protocol -Unique
-    Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $SiteEnabledProtocols {
-        param($path, $enabledProtocols)
-        Set-ItemProperty -Path $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
-    }
+    Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name EnabledProtocols -Value ($SiteEnabledProtocols -join ',')
 
     $bindingParams = @()
     foreach($binding in $BindingInfo)
@@ -1043,10 +976,7 @@ function UpdateBindings
 
     try
     {
-        Synchronized -Name "IIS" -ArgumentList "IIS:\Sites\${Name}", $bindingParams {
-            param($path, $bindings)
-            Set-ItemProperty -Path $path -Name bindings -value $bindings
-        }
+        Set-ItemProperty -Path "IIS:\Sites\${Name}" -Name bindings -value $bindingParams
     }
     Catch
     {
@@ -1207,13 +1137,54 @@ function Get-SslFlags
     return $sslFlags
 }
 
+function Stop-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
+    {
+        Import-Module ApplicationServer 4>&1 | Out-Null
+        Stop-ASApplication -SiteName $SiteName
+    }
+}
+
+function Start-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
+    {
+        Import-Module ApplicationServer 4>&1 | Out-Null
+        Start-ASApplication -SiteName $SiteName
+    }
+}
+
+
 function Confirm-Dependencies
 {
-    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    Write-Debug "Checking whether WebAdministration is there in the machine or not."
+    Get-Module -ListAvailable -Name WebAdministration -OutVariable webAdministrationModule 4>&1 | Out-Null
+    if(-not $webAdministrationModule)
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
+    Import-Module WebAdministration 4>&1 | Out-Null
 }
 
 #endregion

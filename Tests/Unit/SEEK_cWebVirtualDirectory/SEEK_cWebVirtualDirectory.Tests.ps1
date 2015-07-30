@@ -15,6 +15,9 @@ $MockWebApplication = New-Object PSObject -Property @{
     count = 1
 }
 
+function Start-ASApplication { param([string]$SiteName) }
+function Stop-ASApplication { param([string]$SiteName) }
+
 Describe "Get-TargetResource" {
     Mock Test-Path { $false }
     Mock Get-Item

@@ -2,6 +2,9 @@ $module = Join-Path $PSScriptRoot "..\..\..\Modules\SEEK - Modules\cWebAdministr
 $code = Get-Content $module | Out-String
 Invoke-Expression $code
 
+function Start-ASApplication { param([string]$SiteName) }
+function Stop-ASApplication { param([string]$SiteName) }
+
 Describe "Get-TargetResource" {
     $bindingProperties = @{
         BindingInformation = "Binding Information"

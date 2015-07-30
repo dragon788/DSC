@@ -4,13 +4,20 @@ Configuration TestConfiguration
 
     Node 'localhost'
     {
+
+        WindowsFeature MessageQueueing
+        {
+            Ensure = "Present"
+            Name = "MSMQ"
+        }
+
         cPrivateMsmqQueuePermissions TestQueuePermissions
         {
             Name = "Test"
             QueueNames = @("Test1","Test2")
             Ensure = "Present"
-            AdminUsers = @("SEEK\IT Development Team")
-            ReadUsers = @("SEEK\svc_developer_iis")
+            AdminUsers = @("Everyone")
+            ReadUsers = @("Everyone")
             WriteUsers = @("Everyone")
             DependsOn = @("[cPrivateMsmqQueue]Test1Queue", "[cPrivateMsmqQueue]Test2Queue")
         }
@@ -43,9 +50,6 @@ function Remove-TestQueue($TestQueuePath)
 }
 
 Describe "PrivateMsmqQueue and PrivateMsmqQueuePermissions DSC Resource" {
-    Remove-TestQueue ".\private$\Test1"
-    Remove-TestQueue ".\private$\Test2"
-
     It "creates new queues with custom permissions" {
         TestConfiguration -OutputPath .\tmp
         Start-DscConfiguration -Force -Wait -Verbose -Path .\tmp
@@ -59,6 +63,4 @@ Describe "PrivateMsmqQueue and PrivateMsmqQueuePermissions DSC Resource" {
     }
 
     Remove-Item -Recurse -Force .\tmp -ErrorAction Ignore  | Out-Null
-    Remove-TestQueue ".\private$\Test1"
-    Remove-TestQueue ".\private$\Test2"
 }

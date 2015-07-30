@@ -1,43 +1,3 @@
-function Synchronized
-{
-    [CmdletBinding()]
-    param
-    (
-        [ValidateNotNullOrEmpty()]
-        [ValidatePattern("^[^\\]?")]
-        [parameter(Mandatory = $true)]
-        [string] $Name,
-
-        [parameter(Mandatory = $true)]
-        [ScriptBlock] $ScriptBlock,
-
-        [parameter(Mandatory = $false)]
-        [int] $MillisecondsTimeout = 5000,
-
-        [parameter(Mandatory = $false)]
-        [boolean] $InitiallyOwned = $false,
-
-        [parameter(Mandatory = $false)]
-        [Object[]] $ArgumentList = @(),
-
-        [parameter(Mandatory = $false)]
-        [ValidateSet("Global","Local","Session")]
-        [Object[]] $Scope = "Global"
-    )
-
-    $mutex = New-Object System.Threading.Mutex($InitiallyOwned, "${Scope}\${Name}")
-
-    if ($mutex.WaitOne($MillisecondsTimeout)) {
-        try {
-            Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        }
-        finally {
-            $mutex.ReleaseMutex()
-        }
-    }
-    else { throw "Cannot aquire mutex: $Name"}
-}
-
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -47,6 +7,8 @@ function Get-TargetResource
         [parameter(Mandatory = $true)]
         [System.String] $Site
     )
+
+    Confirm-Dependencies
 
     get-BindingsResource (get-BindingConfigElements $Site) $Site
 }
@@ -69,6 +31,8 @@ function Test-TargetResource
         [System.Boolean]
         $Clear = $false
     )
+
+    Confirm-Dependencies
 
     $currentCimBindings = get-CurrentCimBindings $Site
     $commonCimBindings = select-CommonCimBindings (new-CimBindingsWithBindingInformation $Bindings) $currentCimBindings
@@ -99,21 +63,24 @@ function Set-TargetResource
         $Clear = $false
     )
 
+    Confirm-Dependencies
+    Stop-AppFabricApplicationServer -SiteName $Site
 
+    try
+    {
+        $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
+        $sitePath = $("IIS:\Sites\${Site}")
+        Set-ItemProperty -Path $sitePath -Name bindings -Value (new-BindingsValue $newCimBindings)
+        $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
 
-    $newCimBindings = new-CimBindingsForSite $Ensure $Bindings $Site $Clear
-    $sitePath = $("IIS:\Sites\${Site}")
-    Synchronized -Name "IIS" -ArgumentList $sitePath, (new-BindingsValue $newCimBindings) {
-        param($path, $bindings)
-        Set-ItemProperty -Path $path -Name bindings -Value $bindings
+        $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
+        Set-ItemProperty $sitePath -Name EnabledProtocols -Value ($protocols -join ',')
     }
-    $newCimBindings | Where-Object Protocol -eq "https" | ForEach-Object { add-SslCertificateForHttpsCimBinding $_ }
-
-    $protocols = $newCimBindings | Select-Object -ExpandProperty Protocol -Unique
-    Synchronized -Name "IIS" -ArgumentList $sitePath, $protocols {
-        param($path, $enabledProtocols)
-        Set-ItemProperty $path -Name EnabledProtocols -Value ($enabledProtocols -join ',')
+    finally
+    {
+        Start-AppFabricApplicationServer -SiteName $Site
     }
+
 }
 
 function New-CimBinding
@@ -416,13 +383,53 @@ function select-FromCimBindingsWithoutCimBindings
     $from | Where-Object { -not (containsCimBinding $without $_) }
 }
 
+function Stop-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
+    {
+        Import-Module ApplicationServer 4>&1 | Out-Null
+        Stop-ASApplication -SiteName $SiteName
+    }
+}
+
+function Start-AppFabricApplicationServer
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SiteName
+    )
+
+    Write-Debug "Checking whether App Fabric is installed."
+    Get-Module -ListAvailable -Name ApplicationServer -OutVariable applicationServerModule 4>&1 | Out-Null
+    if($applicationServerModule)
+    {
+        Import-Module ApplicationServer 4>&1 | Out-Null
+        Start-ASApplication -SiteName $SiteName
+    }
+}
+
 function Confirm-Dependencies
 {
-    Write-Verbose "Checking whether WebAdministration is there in the machine or not."
-    if(!(Get-Module -ListAvailable -Name WebAdministration))
+    Write-Debug "Checking whether WebAdministration is there in the machine or not."
+    Get-Module -ListAvailable -Name WebAdministration -OutVariable webAdministrationModule 4>&1 | Out-Null
+    if(-not $webAdministrationModule)
     {
         Throw "Please ensure that the WebAdministration module is installed."
     }
+    Import-Module WebAdministration 4>&1 | Out-Null
 }
 
 Export-ModuleMember -Function *-TargetResource

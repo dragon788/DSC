@@ -10,7 +10,7 @@ properties {
   if ($env:RELEASE_TAG) { $version = ($env:RELEASE_TAG -replace "v(.+)", '$1') }
 }
 
-task default -depends Clean, UnitTest
+task default -depends Clean, UnitTest, E2ETest
 
 task Package -depends Clean {
   if (-not (Test-Path $outputPackageDir)) {
