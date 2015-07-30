@@ -68,24 +68,7 @@ function Set-TargetResource
         $overrideMode = "Allow"
     }
 
-    Override-IISConfiguration -Filter $Section -OverrideMode $overrideMode
-}
-
-function Override-IISConfiguration {
-    [CmdletBinding()]
-    param
-    (
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $Filter,
-
-        [parameter(Mandatory = $true)]
-        [System.String]
-        $OverrideMode
-    )
-
-
-    Set-WebConfiguration -Filter $Filter -PSPath "IIS:" -MetaData "overrideMode" -Value $OverrideMode
+    Set-WebConfiguration -Filter $Section -PSPath "IIS:" -MetaData "overrideMode" -Value $overrideMode
 }
 
 function Confirm-Dependencies
