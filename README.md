@@ -1,3 +1,7 @@
+# THIS PROJECT IS NO LONGER MAINTAINED
+# IT WILL BE REMOVED WITHIN THE NEXT 3 MONTHS
+# CONTACT jbaker@seek.com.au IF YOU HAVE QUESTIONS/COMMENTS/ETC
+
 # SEEK Ltd. PowerShell Desired State Configuration Resources
 
 This project includes custom DSC resources used by SEEK Ltd.
