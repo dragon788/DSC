@@ -1,6 +1,8 @@
 # THIS PROJECT IS NO LONGER MAINTAINED
 # IT WILL BE REMOVED WITHIN THE NEXT 3 MONTHS
-# CONTACT jbaker@seek.com.au IF YOU HAVE QUESTIONS/COMMENTS/ETC
+
+### Contact jbaker@seek.com.au if you have question/comments/etc
+### Work is underway to backport most of this into the Microsoft Github repo https://github.com/PowerShell
 
 # SEEK Ltd. PowerShell Desired State Configuration Resources
 
